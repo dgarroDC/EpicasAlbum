@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using EpicasAlbum.CustomShipLogModes;
 using OWML.Common;
 using OWML.ModHelper;
 using UnityEngine;
@@ -33,7 +34,22 @@ public class EpicasAlbum : ModBehaviour
         // Same Gamepass profile name as New Horizons
         string profileName = StandaloneProfileManager.SharedInstance?.currentProfile?.profileName ?? "XboxGamepassDefaultProfile";
         _store = new AlbumStore(Path.Combine(ModHelper.Manifest.ModFolderPath, "snapshots", profileName));
+        CreateMode();
         _setupDone = true;
+    }
+    
+    public void CreateMode()
+    {
+        ICustomShipLogModesAPI customShipLogModesAPI = ModHelper.Interaction.TryGetModApi<ICustomShipLogModesAPI>("dgarro.CustomShipLogModes");
+            
+        customShipLogModesAPI.ItemListMake(true, false, itemList =>
+        {
+            EpicasAlbumMode epicasAlbumMode = itemList.gameObject.AddComponent<EpicasAlbumMode>();
+            epicasAlbumMode.ItemList = new ItemListWrapper(customShipLogModesAPI, itemList);
+            epicasAlbumMode.Store = _store;
+            epicasAlbumMode.gameObject.name = nameof(EpicasAlbumMode);
+            customShipLogModesAPI.AddMode(epicasAlbumMode, () => true, () => EpicasAlbumMode.Name);
+        });
     }
 
     private void Update()

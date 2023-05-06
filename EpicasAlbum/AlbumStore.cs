@@ -9,7 +9,7 @@ namespace EpicasAlbum;
 public class AlbumStore
 {
     private string _folder;
-    private List<string> _snapshotNames = new();
+    public List<string> SnapshotNames = new();
     private Dictionary<string, Texture2D> _loadedSnapshots = new();
 
     public AlbumStore(string folder)
@@ -21,15 +21,15 @@ public class AlbumStore
         }
         foreach (FileInfo file in new DirectoryInfo(folder).GetFiles().OrderBy(f => f.CreationTime))
         {
-            _snapshotNames.Add(file.Name);
+            SnapshotNames.Add(file.Name);
         }
     }
     
     public void Save(Texture2D snapshotTexture)
     {
-        // Based on ProbeLauncher.SaveSnapshotToFile (but with full year and in 24 hours format)
+        // Based on ProbeLauncher.SaveSnapshotToFile
         byte[] data = snapshotTexture.EncodeToPNG();
-        string baseName = $"ProbePhoto_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}";
+        string baseName = $"{DateTime.Now:yyyy-MM-dd_HH-mm-ss}";
         string fileName = baseName + ".png";
         int num = 1;
         while (File.Exists(Path.Combine(_folder, fileName)))
@@ -39,7 +39,21 @@ public class AlbumStore
         }
         File.WriteAllBytes(Path.Combine(_folder, fileName), data);
 
-        _snapshotNames.Add(fileName);
+        SnapshotNames.Add(fileName);
         _loadedSnapshots.Add(fileName, snapshotTexture);
+    }
+
+    public Texture2D GetTexture(string fileName)
+    {
+        if (_loadedSnapshots.ContainsKey(fileName))
+        {
+            return _loadedSnapshots[fileName];
+        }
+
+        byte[] data = File.ReadAllBytes(Path.Combine(_folder, fileName));
+        Texture2D texture = new Texture2D(2, 2);
+        texture.LoadImage(data);
+        _loadedSnapshots.Add(fileName, texture);
+        return texture;
     }
 }
