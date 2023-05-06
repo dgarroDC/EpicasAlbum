@@ -1,28 +1,55 @@
 ﻿using OWML.Common;
 using OWML.ModHelper;
+using UnityEngine.UI;
 
 namespace EpicasAlbum;
 
 public class EpicasAlbum : ModBehaviour
 {
-    private void Awake()
-    {
-        // You won't be able to access OWML's mod helper in Awake.
-        // So you probably don't want to do anything here.
-        // Use Start() instead.
-    }
+    private static EpicasAlbum _instance;
+
+    private bool _setupDone;
+    private ScreenPrompt _uploadPrompt;
 
     private void Start()
     {
-        // Starting here, you'll have access to OWML's mod helper.
-        ModHelper.Console.WriteLine($"My mod {nameof(EpicasAlbum)} is loaded!", MessageType.Success);
-
-
-        // Example of accessing game code.
+        _instance = this;
+        ModHelper.HarmonyHelper.AddPostfix<ShipLogController>("LateInitialize", typeof(EpicasAlbum), nameof(SetupPatch));
         LoadManager.OnCompleteSceneLoad += (scene, loadScene) =>
         {
-            if (loadScene != OWScene.SolarSystem) return;
-            ModHelper.Console.WriteLine("Loaded into solar system!", MessageType.Success);
+            _setupDone = false;
         };
+    }
+    
+    private static void SetupPatch() {
+        _instance.Setup();
+    }
+
+    private void Setup()
+    {
+        // TODO: Translation
+        _uploadPrompt = new ScreenPrompt(InputLibrary.lockOn, "Upload Snapshot");
+        Locator.GetPromptManager().AddScreenPrompt(_uploadPrompt, PromptPosition.UpperRight);
+        _setupDone = true;
+    }
+
+    private void Update()
+    {
+        if (!_setupDone) return;
+ 
+        // TODO: Any probe launcher?
+        ProbeLauncher probeLauncher = Locator.GetToolModeSwapper().GetProbeLauncher();
+        Image image = probeLauncher._launcherUIs[1]._image; // 0 other?
+        _uploadPrompt.SetVisibility(image.enabled);
+        if (image.enabled)
+        {
+            if (OWInput.IsNewlyPressed(InputLibrary.lockOn))
+            {
+                probeLauncher.SaveSnapshotToFile();
+                // TODO: Translation
+                NotificationData notification = new NotificationData(NotificationTarget.Player, "SNAPSHOT UPLOADED");
+                NotificationManager.SharedInstance.PostNotification(notification);
+            }
+        }
     }
 }
