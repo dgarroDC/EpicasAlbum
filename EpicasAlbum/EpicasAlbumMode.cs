@@ -21,6 +21,12 @@ public class EpicasAlbumMode : ShipLogMode
         _photo = ItemList.GetPhoto();
         _photo.gameObject.SetActive(true);
         _photo.preserveAspect = true;
+
+        GameObject canvas = GameObject.Find("Ship_Body/Module_Cabin/Systems_Cabin/ShipLogPivot/ShipLog/ShipLogPivot/ShipLogCanvas/");
+        AlbumLayout.Create(canvas);
+        BorderedImage borderedImage = BorderedImage.Create();
+        borderedImage.transform.SetParent(_photo.transform.parent.parent);
+        borderedImage.SetBorderColor(new Color(0.3882f, 0.498f, 0.8431f));
     }
 
     public override void EnterMode(string entryID = "", List<ShipLogFact> revealQueue = null)
