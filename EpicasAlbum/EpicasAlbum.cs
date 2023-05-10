@@ -60,7 +60,7 @@ public class EpicasAlbum : ModBehaviour
         ProbeLauncher probeLauncher = Locator.GetToolModeSwapper().GetProbeLauncher();
         Image image = probeLauncher._launcherUIs[1]._image; // 0 other?
         _uploadPrompt.SetVisibility(image.enabled);
-        if (image.enabled)
+        if (image.enabled) // TODO: Not on map and menu?
         {
             if (OWInput.IsNewlyPressed(InputLibrary.lockOn))
             {

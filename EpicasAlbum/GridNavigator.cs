@@ -18,7 +18,7 @@ public class GridNavigator : MonoBehaviour
     {
         // See ShipLogMapMode.UpdateMode()
         // I should probably extract a button thing or something...
-        if (OWInput.IsNewlyPressed(InputLibrary.left) || OWInput.IsNewlyPressed(InputLibrary.left2))
+        if (OWInput.IsPressed(InputLibrary.left) || OWInput.IsPressed(InputLibrary.left2))
         {
             _pressedLeftTimer += Time.unscaledDeltaTime;
         }
@@ -27,7 +27,7 @@ public class GridNavigator : MonoBehaviour
             _nextHoldLeftTime = 0f;
             _pressedLeftTimer = 0f;
         }
-        if (OWInput.IsNewlyPressed(InputLibrary.right) || OWInput.IsNewlyPressed(InputLibrary.right2))
+        if (OWInput.IsPressed(InputLibrary.right) || OWInput.IsPressed(InputLibrary.right2))
         {
             _pressedRighTimer += Time.unscaledDeltaTime;
         }
@@ -36,7 +36,7 @@ public class GridNavigator : MonoBehaviour
             _nextHoldRightTime = 0f;
             _pressedRighTimer = 0f;
         }
-        if (OWInput.IsNewlyPressed(InputLibrary.up) || OWInput.IsNewlyPressed(InputLibrary.up2))
+        if (OWInput.IsPressed(InputLibrary.up) || OWInput.IsPressed(InputLibrary.up2))
         {
             _pressedUpTimer += Time.unscaledDeltaTime;
         }
@@ -45,7 +45,7 @@ public class GridNavigator : MonoBehaviour
             _nextHoldUpTime = 0f;
             _pressedUpTimer = 0f;
         }
-        if (OWInput.IsNewlyPressed(InputLibrary.down) || OWInput.IsNewlyPressed(InputLibrary.down2))
+        if (OWInput.IsPressed(InputLibrary.down) || OWInput.IsPressed(InputLibrary.down2))
         {
             _pressedDownTimer += Time.unscaledDeltaTime;
         }

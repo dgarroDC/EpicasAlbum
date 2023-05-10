@@ -127,12 +127,11 @@ public class AlbumLayout : MonoBehaviour
                 {
                     gridImage.SetBorderColor(DEFAULT_BORDER);
                 }
+                gridImage.SetVisible(true);
             }
             else
             {
-                // TODO: Hide
-                gridImage.SetImage(Texture2D.blackTexture);
-                gridImage.SetBorderColor(Color.red);
+                gridImage.SetVisible(false);
             }
         }
     }

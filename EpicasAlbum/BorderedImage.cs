@@ -48,4 +48,10 @@ public class BorderedImage : MonoBehaviour
         // TODO: Cache sprites? Or at least take Sprite so big image resuses the one in grid!
         innerImage.sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), new Vector2(0.5f, 0.5f));
     }
+
+    public void SetVisible(bool visible)
+    {
+        borderImage.enabled = visible;
+        innerImage.enabled = visible;
+    }
 }
