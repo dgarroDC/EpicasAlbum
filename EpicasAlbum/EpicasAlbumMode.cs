@@ -14,6 +14,7 @@ public class EpicasAlbumMode : ShipLogMode
     public AlbumStore Store;
 
     private Image _photo;
+    private AlbumLayout _layout;
 
     public override void Initialize(ScreenPromptList centerPromptList, ScreenPromptList upperRightPromptList, OWAudioSource oneShotSource)
     {
@@ -23,21 +24,20 @@ public class EpicasAlbumMode : ShipLogMode
         _photo.preserveAspect = true;
 
         GameObject canvas = GameObject.Find("Ship_Body/Module_Cabin/Systems_Cabin/ShipLogPivot/ShipLog/ShipLogPivot/ShipLogCanvas/");
-        AlbumLayout.Create(canvas);
-        BorderedImage borderedImage = BorderedImage.Create();
-        borderedImage.transform.SetParent(_photo.transform.parent.parent);
-        borderedImage.SetBorderColor(new Color(0.3882f, 0.498f, 0.8431f));
+        _layout = AlbumLayout.Create(canvas, oneShotSource);
     }
 
     public override void EnterMode(string entryID = "", List<ShipLogFact> revealQueue = null)
     {
-        ItemList.Open();
-        List<Tuple<string,bool,bool,bool>> items = Store.SnapshotNames
-            .Select(snapshotName => new Tuple<string, bool, bool, bool>(snapshotName, false, false, false))
-            .ToList();
-        ItemList.SetItems(items);
-        ItemList.SetSelectedIndex(0);
-        OnItemSelected();
+        // ItemList.Open();
+        // List<Tuple<string,bool,bool,bool>> items = Store.SnapshotNames
+        //     .Select(snapshotName => new Tuple<string, bool, bool, bool>(snapshotName, false, false, false))
+        //     .ToList();
+        // ItemList.SetItems(items);
+        // ItemList.SetSelectedIndex(0);
+        // OnItemSelected();
+
+        _layout.textures = Store.SnapshotNames.Select(snapshotName => Store.GetTexture(snapshotName)).ToList();
     }
     
     private void OnItemSelected()
@@ -50,15 +50,17 @@ public class EpicasAlbumMode : ShipLogMode
     
     public override void UpdateMode()
     {
-        if (ItemList.UpdateList() != 0)
-        {
-            OnItemSelected();
-        }
+        // if (ItemList.UpdateList() != 0)
+        // {
+        //     OnItemSelected();
+        // }
+        
+        _layout.UpdateLayout();
     }
 
     public override void ExitMode()
     {
-        ItemList.Close();
+        // ItemList.Close();
     }
 
     public override void OnEnterComputer()

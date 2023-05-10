@@ -5,23 +5,23 @@ namespace EpicasAlbum;
 
 public class BorderedImage : MonoBehaviour
 {
-    private static Image _borderImage;
-    private RectTransform _innerImageRect;
-    private Image _innerImage;
+    public Image borderImage;
+    public RectTransform innerImageRect;
+    public Image innerImage;
 
     public static BorderedImage Create()
     {
         GameObject borderedImageGo = new GameObject("BorderedImage", typeof(Image), typeof(BorderedImage));
         BorderedImage borderedImage =  borderedImageGo.GetComponent<BorderedImage>();
-        _borderImage = borderedImageGo.GetComponent<Image>();
+        borderedImage.borderImage = borderedImageGo.GetComponent<Image>();
 
         GameObject innerImageGo = new GameObject("InnerImage", typeof(Image));
-        borderedImage._innerImage = innerImageGo.GetComponent<Image>();
-        borderedImage._innerImageRect = innerImageGo.GetComponent<RectTransform>();
-        borderedImage._innerImageRect.parent = borderedImageGo.transform;
-        borderedImage._innerImageRect.anchorMin = Vector2.zero;
-        borderedImage._innerImageRect.anchorMax = Vector2.one;
-        borderedImage._innerImageRect.pivot = new Vector2(0.5f, 0.5f);
+        borderedImage.innerImage = innerImageGo.GetComponent<Image>();
+        borderedImage.innerImageRect = innerImageGo.GetComponent<RectTransform>();
+        borderedImage.innerImageRect.parent = borderedImageGo.transform;
+        borderedImage.innerImageRect.anchorMin = Vector2.zero;
+        borderedImage.innerImageRect.anchorMax = Vector2.one;
+        borderedImage.innerImageRect.pivot = new Vector2(0.5f, 0.5f);
         borderedImage.SetBorderSize(2);
 
         return borderedImage;
@@ -29,17 +29,23 @@ public class BorderedImage : MonoBehaviour
 
     public void SetBorderSize(int borderSize)
     {
-        _innerImageRect.offsetMin = new Vector2(borderSize, borderSize);
-        _innerImageRect.offsetMax = new Vector2(-borderSize, -borderSize);
+        innerImageRect.offsetMin = new Vector2(borderSize, borderSize);
+        innerImageRect.offsetMax = new Vector2(-borderSize, -borderSize);
     }
 
     public Image GetInnerImage()
     {
-        return _innerImage;
+        return innerImage;
     }
 
     public void SetBorderColor(Color borderColor)
     {
-        _borderImage.color = borderColor;
+        borderImage.color = borderColor;
+    }
+
+    public void SetImage(Texture2D texture)
+    {
+        // TODO: Cache sprites? Or at least take Sprite so big image resuses the one in grid!
+        innerImage.sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), new Vector2(0.5f, 0.5f));
     }
 }
