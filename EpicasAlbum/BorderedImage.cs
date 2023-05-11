@@ -8,6 +8,7 @@ public class BorderedImage : MonoBehaviour
     public Image borderImage;
     public RectTransform innerImageRect;
     public Image innerImage;
+    public CanvasGroup canvasGroup;
 
     public static BorderedImage Create()
     {
@@ -25,6 +26,8 @@ public class BorderedImage : MonoBehaviour
         borderedImage.SetBorderSize(2);
 
         borderedImage.innerImage.preserveAspect = true;
+
+        borderedImage.canvasGroup = borderedImageGo.AddComponent<CanvasGroup>();
 
         return borderedImage;
     }
@@ -54,5 +57,10 @@ public class BorderedImage : MonoBehaviour
     {
         borderImage.enabled = visible;
         innerImage.enabled = visible;
+    }
+
+    public void SetAlpha(float alpha)
+    {
+        canvasGroup.alpha = alpha;
     }
 }

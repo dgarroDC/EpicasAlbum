@@ -20,7 +20,8 @@ public class AlbumLayout : MonoBehaviour
     private BorderedImage _bigImage;
     private List<BorderedImage> _gridImages;
     private GridNavigator _gridNavigator;
-    private OWAudioSource _oneShotSource;
+    private OWAudioSource _oneShotSource; // TODO: Remove from Create (ItemList like)?
+    private CanvasGroupAnimator _animator;
 
     public int selectedIndex;
     public List<Func<Sprite>> sprites = new(); // TODO: Can be used for animations?
@@ -40,10 +41,10 @@ public class AlbumLayout : MonoBehaviour
         albumLayoutRect.offsetMax = Vector2.zero;
 
         BorderedImage borderedImage = BorderedImage.Create();
-        borderedImage.SetBorderColor(DEFAULT_BORDER);
 
         albumLayout._bigImage = Instantiate(borderedImage, albumLayout.transform);
         albumLayout._bigImage.name = "BigImage";
+        albumLayout._bigImage.SetBorderColor(SELECT_BORDER);
         RectTransform bigImageRect = albumLayout._bigImage.GetComponent<RectTransform>();
         // Centered vertically, offset from right
         bigImageRect.anchorMin = new Vector2(1, 0.5f);
@@ -82,9 +83,23 @@ public class AlbumLayout : MonoBehaviour
         albumLayout._gridNavigator = new GridNavigator();
         albumLayout._oneShotSource = oneShotSource;
 
+        albumLayout._animator = albumLayoutGo.AddComponent<CanvasGroupAnimator>();
+        albumLayout._animator.SetImmediate(1f, new Vector3(0f, 1f, 1f));
+
         return albumLayout;
     }
-    
+
+    public void Open()
+    {
+        _animator.AnimateTo(1f, Vector3.one, 0.5f);
+        DisplaySelected();
+    }
+
+    public void Close()
+    {
+        _animator.AnimateTo(1f, new Vector3(0f, 1f, 1f), 0.5f);
+    }
+
     // TODO: Another name? Return delta?
     public void UpdateLayout()
     {
@@ -97,13 +112,18 @@ public class AlbumLayout : MonoBehaviour
             if (selectionChange != Vector2.zero)
             {
                 selectedIndex += (int)selectionChange.y * GRID_COLUMNS + (int)selectionChange.x;
-                _bigImage.DisplaySprite(sprites[selectedIndex].Invoke()); // TODO: Also do this on enter!
+                DisplaySelected();
                 // TODO: Range checks etc.
                 _oneShotSource.PlayOneShot(AudioType.ShipLogMoveBetweenEntries);
             }
         }
         
         UpdateLayoutUI();
+    }
+
+    private void DisplaySelected()
+    {
+        _bigImage.DisplaySprite(sprites[selectedIndex].Invoke());
     }
 
     private void UpdateLayoutUI()
@@ -120,10 +140,12 @@ public class AlbumLayout : MonoBehaviour
                 if (imageIndex == selectedIndex)
                 {
                     gridImage.SetBorderColor(SELECT_BORDER);
+                    gridImage.SetAlpha(1f);
                 }
                 else
                 {
                     gridImage.SetBorderColor(DEFAULT_BORDER);
+                    gridImage.SetAlpha(0.92f);
                 }
                 gridImage.SetVisible(true);
             }

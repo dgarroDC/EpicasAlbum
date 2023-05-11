@@ -13,14 +13,17 @@ public class EpicasAlbumMode : ShipLogMode
     public AlbumStore Store;
 
     private AlbumLayout _layout;
+    private OWAudioSource _oneShotSource;
 
     public override void Initialize(ScreenPromptList centerPromptList, ScreenPromptList upperRightPromptList, OWAudioSource oneShotSource)
     {
+        _oneShotSource = oneShotSource;
         _layout = AlbumLayout.Create(gameObject, oneShotSource);
     }
 
     public override void EnterMode(string entryID = "", List<ShipLogFact> revealQueue = null)
     {
+        // TODO: If empty?
         List<Func<Sprite>> sprites = new();
         foreach (string snapshotName in Store.SnapshotNames)
         {
@@ -28,6 +31,8 @@ public class EpicasAlbumMode : ShipLogMode
             sprites.Add(spriteProvider);
         }
         _layout.sprites = sprites;
+        _oneShotSource.PlayOneShot(AudioType.ToolProbeTakePhoto);
+        _layout.Open();
     }
 
     public override void UpdateMode()
@@ -37,7 +42,7 @@ public class EpicasAlbumMode : ShipLogMode
 
     public override void ExitMode()
     {
-
+        _layout.Close();
     }
 
     public override void OnEnterComputer()
