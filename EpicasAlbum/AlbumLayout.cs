@@ -25,12 +25,10 @@ public class AlbumLayout : MonoBehaviour
     public int selectedIndex;
     public List<Func<Sprite>> sprites = new(); // TODO: Can be used for animations?
 
-    public static AlbumLayout Create(GameObject canvas, OWAudioSource oneShotSource)
+    public static AlbumLayout Create(GameObject albumLayoutGo, OWAudioSource oneShotSource)
     {
-        GameObject albumLayoutGo = new GameObject("AlbumLayout");
         RectTransform albumLayoutRect = albumLayoutGo.AddComponent<RectTransform>();
         AlbumLayout albumLayout = albumLayoutGo.AddComponent<AlbumLayout>();
-        albumLayoutGo.transform.parent = canvas.transform; // TODO: Outside?
         albumLayoutGo.transform.SetSiblingIndex(1); // So we get prompts and border mask over it, but not the background...
         albumLayoutRect.localPosition = Vector3.zero;
         albumLayoutRect.localEulerAngles = Vector3.zero;

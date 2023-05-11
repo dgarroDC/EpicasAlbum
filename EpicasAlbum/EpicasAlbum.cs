@@ -41,15 +41,14 @@ public class EpicasAlbum : ModBehaviour
     public void CreateMode()
     {
         ICustomShipLogModesAPI customShipLogModesAPI = ModHelper.Interaction.TryGetModApi<ICustomShipLogModesAPI>("dgarro.CustomShipLogModes");
-            
-        customShipLogModesAPI.ItemListMake(true, false, itemList =>
-        {
-            EpicasAlbumMode epicasAlbumMode = itemList.gameObject.AddComponent<EpicasAlbumMode>();
-            epicasAlbumMode.ItemList = new ItemListWrapper(customShipLogModesAPI, itemList);
-            epicasAlbumMode.Store = _store;
-            epicasAlbumMode.gameObject.name = nameof(EpicasAlbumMode);
-            customShipLogModesAPI.AddMode(epicasAlbumMode, () => true, () => EpicasAlbumMode.Name);
-        });
+        
+        GameObject shipLogCanvas = GameObject.Find("Ship_Body/Module_Cabin/Systems_Cabin/ShipLogPivot/ShipLog/ShipLogPivot/ShipLogCanvas/");
+        GameObject albumGo = new GameObject(nameof(EpicasAlbumMode));
+        albumGo.transform.SetParent(shipLogCanvas.transform);
+        EpicasAlbumMode epicasAlbumMode = albumGo.AddComponent<EpicasAlbumMode>();
+        epicasAlbumMode.Store = _store;
+        epicasAlbumMode.gameObject.name = nameof(EpicasAlbumMode);
+        customShipLogModesAPI.AddMode(epicasAlbumMode, () => true, () => EpicasAlbumMode.Name);
     }
 
     private void Update()
