@@ -9,7 +9,7 @@ namespace EpicasAlbum;
 
 public class EpicasAlbum : ModBehaviour
 {
-    private static EpicasAlbum _instance;
+    public static EpicasAlbum Instance;
 
     private bool _setupDone;
     private ScreenPrompt _uploadPrompt;
@@ -17,13 +17,13 @@ public class EpicasAlbum : ModBehaviour
 
     private void Start()
     {
-        _instance = this;
+        Instance = this;
         ModHelper.HarmonyHelper.AddPostfix<ShipLogController>("LateInitialize", typeof(EpicasAlbum), nameof(SetupPatch));
         LoadManager.OnCompleteSceneLoad += (scene, loadScene) => _setupDone = false;
     }
     
     private static void SetupPatch() {
-        _instance.Setup();
+        Instance.Setup();
     }
 
     private void Setup()
@@ -60,7 +60,7 @@ public class EpicasAlbum : ModBehaviour
         ProbeLauncher probeLauncher = Locator.GetToolModeSwapper().GetProbeLauncher();
         Image image = probeLauncher._launcherUIs[1]._image; // 0 other?
         _uploadPrompt.SetVisibility(image.enabled);
-        if (image.enabled) // TODO: Not on map and menu?
+        if (image.enabled) // TODO: Not on map and menu/paused? Prevent retake? Lockon?
         {
             if (OWInput.IsNewlyPressed(InputLibrary.lockOn))
             {

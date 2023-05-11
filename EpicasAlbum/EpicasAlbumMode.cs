@@ -36,16 +36,20 @@ public class EpicasAlbumMode : ShipLogMode
         // ItemList.SetItems(items);
         // ItemList.SetSelectedIndex(0);
         // OnItemSelected();
-
-        _layout.textures = Store.SnapshotNames.Select(snapshotName => Store.GetTexture(snapshotName)).ToList();
+        List<Func<Sprite>> sprites = new();
+        foreach (string snapshotName in Store.SnapshotNames)
+        {
+            Func<Sprite> spriteProvider = () => Store.GetSprite(snapshotName);
+            sprites.Add(spriteProvider);
+        }
+        _layout.sprites = sprites;
     }
     
     private void OnItemSelected()
     {
         int selectedIndex = ItemList.GetSelectedIndex();
         Texture2D texture = Store.GetTexture(Store.SnapshotNames[selectedIndex]);
-        Sprite sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), new Vector2(0.5f, 0.5f));
-        _photo.sprite = sprite;
+        _photo.sprite = Store.GetSprite(Store.SnapshotNames[selectedIndex]);
     }
     
     public override void UpdateMode()

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,9 +22,8 @@ public class AlbumLayout : MonoBehaviour
     private GridNavigator _gridNavigator;
     private OWAudioSource _oneShotSource;
 
-    // TODO: Provider or something to avoid loading all at once! List<Lazy<>>? Of Sprites!
     public int selectedIndex;
-    public List<Texture2D> textures = new();
+    public List<Func<Sprite>> sprites = new(); // TODO: Can be used for animations?
 
     public static AlbumLayout Create(GameObject canvas, OWAudioSource oneShotSource)
     {
@@ -93,13 +93,13 @@ public class AlbumLayout : MonoBehaviour
         // This is really similar to ShipLogItemList.UpdateList() from Custom Ship Log Modes...
         Vector2 selectionChange = Vector2.zero;
 
-        if (textures.Count >= 2)
+        if (sprites.Count >= 2)
         {
             selectionChange = _gridNavigator.GetSelectionChange();
             if (selectionChange != Vector2.zero)
             {
                 selectedIndex += (int)selectionChange.y * GRID_COLUMNS + (int)selectionChange.x;
-                _bigImage.SetImage(textures[selectedIndex]); // TODO: Also do this on enter!
+                _bigImage.DisplaySprite(sprites[selectedIndex].Invoke()); // TODO: Also do this on enter!
                 // TODO: Range checks etc.
                 _oneShotSource.PlayOneShot(AudioType.ShipLogMoveBetweenEntries);
             }
@@ -116,9 +116,9 @@ public class AlbumLayout : MonoBehaviour
         {
             int imageIndex = i + offset;
             BorderedImage gridImage = _gridImages[i];
-            if (imageIndex >= 0 && imageIndex < textures.Count)
+            if (imageIndex >= 0 && imageIndex < sprites.Count)
             {
-                gridImage.SetImage(textures[imageIndex]);
+                gridImage.DisplaySprite(sprites[imageIndex].Invoke());
                 if (imageIndex == selectedIndex)
                 {
                     gridImage.SetBorderColor(SELECT_BORDER);

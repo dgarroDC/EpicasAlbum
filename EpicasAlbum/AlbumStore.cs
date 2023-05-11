@@ -6,11 +6,13 @@ using UnityEngine;
 
 namespace EpicasAlbum;
 
+// TODO: fileName -> snapshotName?
 public class AlbumStore
 {
     private string _folder;
     public List<string> SnapshotNames = new();
-    private Dictionary<string, Texture2D> _loadedSnapshots = new();
+    private Dictionary<string, Texture2D> _loadedTextures = new(); // TODO: Remove?
+    private Dictionary<string, Sprite> _loadedSprites = new();
 
     public AlbumStore(string folder)
     {
@@ -40,20 +42,34 @@ public class AlbumStore
         File.WriteAllBytes(Path.Combine(_folder, fileName), data);
 
         SnapshotNames.Add(fileName);
-        _loadedSnapshots.Add(fileName, snapshotTexture);
+        _loadedTextures.Add(fileName, snapshotTexture);
     }
 
     public Texture2D GetTexture(string fileName)
     {
-        if (_loadedSnapshots.ContainsKey(fileName))
+        if (_loadedTextures.ContainsKey(fileName))
         {
-            return _loadedSnapshots[fileName];
+            return _loadedTextures[fileName];
         }
 
         byte[] data = File.ReadAllBytes(Path.Combine(_folder, fileName));
         Texture2D texture = new Texture2D(2, 2);
         texture.LoadImage(data);
-        _loadedSnapshots.Add(fileName, texture);
+        _loadedTextures.Add(fileName, texture);
         return texture;
+    }
+
+    public Sprite GetSprite(string fileName)
+    {
+        if (_loadedSprites.ContainsKey(fileName))
+        {
+            return _loadedSprites[fileName];
+        }
+
+        EpicasAlbum.Instance.ModHelper.Console.WriteLine("LOADING " + fileName);
+        Texture2D texture = GetTexture(fileName);
+        Sprite sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+        _loadedSprites.Add(fileName, sprite);
+        return sprite;
     }
 }
