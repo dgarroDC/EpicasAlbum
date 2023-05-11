@@ -8,7 +8,7 @@ public class BorderedImage : MonoBehaviour
     public Image borderImage;
     public RectTransform innerImageRect;
     public Image innerImage;
-    public CanvasGroup canvasGroup;
+    public CanvasGroupAnimator animator;
 
     public static BorderedImage Create()
     {
@@ -27,7 +27,8 @@ public class BorderedImage : MonoBehaviour
 
         borderedImage.innerImage.preserveAspect = true;
 
-        borderedImage.canvasGroup = borderedImageGo.AddComponent<CanvasGroup>();
+        borderedImage.animator = borderedImageGo.AddComponent<CanvasGroupAnimator>();
+        borderedImage.animator.SetImmediate(0f, Vector3.one * 0.05f);
 
         return borderedImage;
     }
@@ -36,11 +37,6 @@ public class BorderedImage : MonoBehaviour
     {
         innerImageRect.offsetMin = new Vector2(borderSize, borderSize);
         innerImageRect.offsetMax = new Vector2(-borderSize, -borderSize);
-    }
-
-    public Image GetInnerImage()
-    {
-        return innerImage;
     }
 
     public void SetBorderColor(Color borderColor)
@@ -59,8 +55,13 @@ public class BorderedImage : MonoBehaviour
         innerImage.enabled = visible;
     }
 
-    public void SetAlpha(float alpha)
+    public void AnimateOpen()
     {
-        canvasGroup.alpha = alpha;
+        animator.AnimateTo(1f, Vector3.one, 0.5f);
+    }
+    
+    public void AnimateClose()
+    {
+        animator.AnimateTo(0f, Vector3.one * 0.05f, 0.05f);
     }
 }
