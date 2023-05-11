@@ -36,7 +36,7 @@ public class AlbumLayout : MonoBehaviour
         albumLayoutRect.localScale = Vector3.one;
         albumLayoutRect.anchorMin = Vector2.zero;
         albumLayoutRect.anchorMax = Vector2.one;
-        albumLayoutRect.pivot = new Vector2(0.5f, 0.5f);
+        albumLayoutRect.pivot = Vector2.zero; // For the animation (from left)
         albumLayoutRect.offsetMin = Vector2.zero;
         albumLayoutRect.offsetMax = Vector2.zero;
 
@@ -91,13 +91,13 @@ public class AlbumLayout : MonoBehaviour
 
     public void Open()
     {
-        _animator.AnimateTo(1f, Vector3.one, 0.5f);
+        _animator.AnimateTo(1f, Vector3.one, 0.3f);
         DisplaySelected();
     }
 
     public void Close()
     {
-        _animator.AnimateTo(1f, new Vector3(0f, 1f, 1f), 0.5f);
+        _animator.AnimateTo(1f, new Vector3(0f, 1f, 1f), 0.3f);
     }
 
     // TODO: Another name? Return delta?
