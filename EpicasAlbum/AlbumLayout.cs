@@ -84,30 +84,20 @@ public class AlbumLayout : MonoBehaviour
         albumLayout._oneShotSource = oneShotSource;
 
         albumLayout._animator = albumLayoutGo.AddComponent<CanvasGroupAnimator>();
-        // albumLayout._animator.SetImmediate(1f, new Vector3(0f, 1f, 1f));
+        albumLayout._animator.SetImmediate(1f, new Vector3(0f, 1f, 1f));
 
         return albumLayout;
     }
 
     public void Open()
     {
-        // _animator.AnimateTo(1f, Vector3.one, 0.5f);
-        _bigImage.AnimateOpen();
-        foreach (BorderedImage gridImage in _gridImages)
-        {
-            gridImage.AnimateOpen();
-        }
+        _animator.AnimateTo(1f, Vector3.one, 0.5f);
         DisplaySelected();
     }
 
     public void Close()
     {
-        // _animator.AnimateTo(1f, new Vector3(0f, 1f, 1f), 0.5f);
-        _bigImage.AnimateClose();
-        foreach (BorderedImage gridImage in _gridImages)
-        {
-            gridImage.AnimateClose();
-        }
+        _animator.AnimateTo(1f, new Vector3(0f, 1f, 1f), 0.5f);
     }
 
     // TODO: Another name? Return delta?
@@ -150,10 +140,12 @@ public class AlbumLayout : MonoBehaviour
                 if (imageIndex == selectedIndex)
                 {
                     gridImage.SetBorderColor(SELECT_BORDER);
+                    gridImage.SetAlpha(1f);
                 }
                 else
                 {
                     gridImage.SetBorderColor(DEFAULT_BORDER);
+                    gridImage.SetAlpha(0.92f);
                 }
                 gridImage.SetVisible(true);
             }
