@@ -66,6 +66,7 @@ public class AlbumStore
         timer.Start();
         Texture2D texture = new Texture2D(2, 2);
         timer.Stop();
+        texture.name = fileName;
         EpicasAlbum.Instance.ModHelper.Console.WriteLine("TIME CREATE TEXTURE="+timer.Elapsed.Milliseconds);
         timer.Start();
         texture.LoadImage(data);
@@ -93,6 +94,7 @@ public class AlbumStore
         // The mesh time seems to make a lot of difference in the time the sprite takes to create!  
         Sprite sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), 
             new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect);
+        sprite.name = fileName;
         timer.Stop();
         EpicasAlbum.Instance.ModHelper.Console.WriteLine("TIME LOAD SPRITE="+timer.Elapsed.Milliseconds);
         _loadedSprites.Add(fileName, sprite);

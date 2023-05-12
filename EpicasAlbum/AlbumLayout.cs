@@ -9,7 +9,7 @@ namespace EpicasAlbum;
 public class AlbumLayout : MonoBehaviour
 {
     private static Color DEFAULT_BORDER = new(0.3882f, 0.498f, 0.8431f);
-    private static Color SELECT_BORDER = Color.white;
+    private static Color SELECT_BORDER = new(1f, 0.6429f, 0.191f);
     private const int HORIZONTAL_OFFSET = 50;
     private const int BIG_IMAGE_SIZE = 470;
     private const int GRID_IMAGE_SIZE = 100;
@@ -44,7 +44,8 @@ public class AlbumLayout : MonoBehaviour
 
         albumLayout._bigImage = Instantiate(borderedImage, albumLayout.transform);
         albumLayout._bigImage.name = "BigImage";
-        albumLayout._bigImage.SetBorderColor(SELECT_BORDER);
+        albumLayout._bigImage.SetBorderColor(DEFAULT_BORDER);
+        albumLayout._bigImage.SetBorderSize(2);
         RectTransform bigImageRect = albumLayout._bigImage.GetComponent<RectTransform>();
         // Centered vertically, offset from right
         bigImageRect.anchorMin = new Vector2(1, 0.5f);
@@ -127,6 +128,7 @@ public class AlbumLayout : MonoBehaviour
         _bigImage.SetVisible(true); // Just in case sprite was null, but it shouldn't
         _bigImage.DisplaySprite(sprites[selectedIndex].Invoke());
 
+        // TODO: Select down images?
         int selectedGridImage = selectedIndex % GRID_COLUMNS + GRID_COLUMNS;
         int offset = selectedIndex - selectedGridImage;
         for (int i = 0; i < _gridImages.Count; i++)
@@ -138,11 +140,13 @@ public class AlbumLayout : MonoBehaviour
                 if (imageIndex == selectedIndex)
                 {
                     gridImage.SetBorderColor(SELECT_BORDER);
+                    gridImage.SetBorderSize(2);
                     gridImage.SetAlpha(1f);
                 }
                 else
                 {
                     gridImage.SetBorderColor(DEFAULT_BORDER);
+                    gridImage.SetBorderSize(4);
                     gridImage.SetAlpha(0.92f);
                 }
                 gridImage.SetVisible(true);
