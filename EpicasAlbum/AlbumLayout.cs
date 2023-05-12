@@ -128,11 +128,18 @@ public class AlbumLayout : MonoBehaviour
         _bigImage.SetVisible(true); // Just in case sprite was null, but it shouldn't
         _bigImage.DisplaySprite(sprites[selectedIndex].Invoke());
 
-        // TODO: Select down images?
-        int selectedGridImage = selectedIndex % GRID_COLUMNS + GRID_COLUMNS;
+        // TODO: Less complicated way to calculate this?
+        int selectedGridImage = selectedIndex % GRID_COLUMNS + GRID_COLUMNS; // If kept at top
         int offset = selectedIndex - selectedGridImage;
-        for (int i = 0; i < _gridImages.Count; i++)
+        int minAllowedEmptyRow = Math.Min((sprites.Count - 1) / GRID_COLUMNS + 2, // + 2 because first emtpy + the top row
+            GRID_ROWS - 1); // The last row doesn't matter
+        int firstEmptyRow = ((sprites.Count - 1) - offset) / GRID_COLUMNS + 1;
+        if (firstEmptyRow < minAllowedEmptyRow)
         {
+            offset -= (minAllowedEmptyRow - firstEmptyRow) * GRID_COLUMNS;
+        }
+        for (int i = 0; i < _gridImages.Count; i++)
+        {   
             int imageIndex = i + offset;
             BorderedImage gridImage = _gridImages[i];
             if (imageIndex >= 0 && imageIndex < sprites.Count)
