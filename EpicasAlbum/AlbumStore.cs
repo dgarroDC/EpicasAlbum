@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using UnityEngine;
@@ -58,20 +57,10 @@ public class AlbumStore
         }
         EpicasAlbum.Instance.texturesLoadedThisFrame++;
         
-        var timer = new Stopwatch();
-        timer.Start();
         byte[] data = File.ReadAllBytes(Path.Combine(_folder, fileName));
-        timer.Stop();
-        EpicasAlbum.Instance.ModHelper.Console.WriteLine("TIME LOAD FILE="+timer.Elapsed.Milliseconds);
-        timer.Start();
         Texture2D texture = new Texture2D(2, 2);
-        timer.Stop();
         texture.name = fileName;
-        EpicasAlbum.Instance.ModHelper.Console.WriteLine("TIME CREATE TEXTURE="+timer.Elapsed.Milliseconds);
-        timer.Start();
         texture.LoadImage(data);
-        timer.Stop();
-        EpicasAlbum.Instance.ModHelper.Console.WriteLine("TIME LOAD TEXTURE="+timer.Elapsed.Milliseconds);
         _loadedTextures.Add(fileName, texture);
         return texture;
     }
@@ -83,20 +72,16 @@ public class AlbumStore
             return _loadedSprites[fileName];
         }
 
-        EpicasAlbum.Instance.ModHelper.Console.WriteLine("LOADING " + fileName);
         Texture2D texture = GetTexture(fileName);
         if (texture == null)
         {
             return null;
         }
-        var timer = new Stopwatch();
-        timer.Start();
+        
         // The mesh time seems to make a lot of difference in the time the sprite takes to create!  
         Sprite sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), 
             new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect);
         sprite.name = fileName;
-        timer.Stop();
-        EpicasAlbum.Instance.ModHelper.Console.WriteLine("TIME LOAD SPRITE="+timer.Elapsed.Milliseconds);
         _loadedSprites.Add(fileName, sprite);
         return sprite;
     }
