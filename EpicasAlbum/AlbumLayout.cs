@@ -118,6 +118,8 @@ public class AlbumLayout : MonoBehaviour
             }
         }
         
+        // Important to call even if it seems nothing changed, the sprite funcs could return a different thing,
+        // for example if loading
         UpdateLayoutUI();
     }
 

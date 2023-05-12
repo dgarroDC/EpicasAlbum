@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using EpicasAlbum.CustomShipLogModes;
 using OWML.Common;
 using OWML.ModHelper;
@@ -10,6 +11,7 @@ namespace EpicasAlbum;
 public class EpicasAlbum : ModBehaviour
 {
     public static EpicasAlbum Instance;
+    public int texturesLoadedThisFrame; // TODO: Move to AlbumStore?
 
     private bool _setupDone;
     private ScreenPrompt _uploadPrompt;
@@ -69,5 +71,10 @@ public class EpicasAlbum : ModBehaviour
                 NotificationManager.SharedInstance.PostNotification(notification);
             }
         }
+    }
+
+    private void LateUpdate()
+    {
+        texturesLoadedThisFrame = 0;
     }
 }
