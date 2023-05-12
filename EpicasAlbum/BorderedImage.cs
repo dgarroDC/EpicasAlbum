@@ -50,6 +50,10 @@ public class BorderedImage : MonoBehaviour
 
     public void DisplaySprite(Sprite sprite)
     {
+        if (sprite == null)
+        {
+            innerImage.enabled = false;
+        }
         innerImage.sprite = sprite;
     }
 

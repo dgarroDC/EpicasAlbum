@@ -92,7 +92,7 @@ public class AlbumLayout : MonoBehaviour
     public void Open()
     {
         _animator.AnimateTo(1f, Vector3.one, 0.3f);
-        DisplaySelected();
+        UpdateLayoutUI(); // Maybe not necessary? Not doing it in item lists...
     }
 
     public void Close()
@@ -112,24 +112,21 @@ public class AlbumLayout : MonoBehaviour
             if (selectionChange != Vector2.zero)
             {
                 selectedIndex += (int)selectionChange.y * GRID_COLUMNS + (int)selectionChange.x;
-                DisplaySelected();
                 // TODO: Range checks etc.
                 _oneShotSource.PlayOneShot(AudioType.ShipLogMoveBetweenEntries);
             }
         }
         
-        // Important to call even if it seems nothing changed, the sprite funcs could return a different thing,
-        // for example if loading
+        // Important to call even if it seems nothing changed, the sprite funcs could return a different thing
         UpdateLayoutUI();
-    }
-
-    private void DisplaySelected()
-    {
-        _bigImage.DisplaySprite(sprites[selectedIndex].Invoke());
     }
 
     private void UpdateLayoutUI()
     {
+        // Make this load before any of the grid images => guaranteed not null
+        _bigImage.SetVisible(true); // Just in case sprite was null, but it shouldn't
+        _bigImage.DisplaySprite(sprites[selectedIndex].Invoke());
+
         int selectedGridImage = selectedIndex % GRID_COLUMNS + GRID_COLUMNS;
         int offset = selectedIndex - selectedGridImage;
         for (int i = 0; i < _gridImages.Count; i++)
@@ -138,7 +135,6 @@ public class AlbumLayout : MonoBehaviour
             BorderedImage gridImage = _gridImages[i];
             if (imageIndex >= 0 && imageIndex < sprites.Count)
             {
-                gridImage.DisplaySprite(sprites[imageIndex].Invoke());
                 if (imageIndex == selectedIndex)
                 {
                     gridImage.SetBorderColor(SELECT_BORDER);
@@ -150,6 +146,7 @@ public class AlbumLayout : MonoBehaviour
                     gridImage.SetAlpha(0.92f);
                 }
                 gridImage.SetVisible(true);
+                gridImage.DisplaySprite(sprites[imageIndex].Invoke()); // Do this after in case of null
             }
             else
             {
