@@ -47,8 +47,12 @@ public class EpicasAlbum : ModBehaviour
         albumGo.transform.SetParent(shipLogCanvas.transform);
         EpicasAlbumMode epicasAlbumMode = albumGo.AddComponent<EpicasAlbumMode>();
         epicasAlbumMode.Store = _store;
-        epicasAlbumMode.gameObject.name = nameof(EpicasAlbumMode);
-        customShipLogModesAPI.AddMode(epicasAlbumMode, () => true, () => EpicasAlbumMode.Name);
+        customShipLogModesAPI.ItemListMake(true, false, itemList =>
+        {
+            itemList.name = "EpicasAlbumList";
+            epicasAlbumMode.ItemList = new ItemListWrapper(customShipLogModesAPI, itemList);
+            customShipLogModesAPI.AddMode(epicasAlbumMode, () => true, () => EpicasAlbumMode.Name);
+        });
     }
 
     private void Update()

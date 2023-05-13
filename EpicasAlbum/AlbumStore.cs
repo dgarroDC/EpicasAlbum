@@ -98,4 +98,12 @@ public class AlbumStore
         string path = GetPath(snapshotName).Replace(@"/", @"\");   // explorer doesn't like front slashes
         Process.Start("explorer.exe", "/select," + path);
     }
+
+    public void DeleteSnapshot(string snapshotName)
+    {
+        File.Delete(GetPath(snapshotName));
+        SnapshotNames.Remove(snapshotName);
+        _loadedTextures.Remove(snapshotName);
+        _loadedSprites.Remove(snapshotName);
+    }
 }
