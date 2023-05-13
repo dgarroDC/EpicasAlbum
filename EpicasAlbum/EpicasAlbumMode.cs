@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using EpicasAlbum.CustomShipLogModes;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace EpicasAlbum;
 
@@ -13,6 +11,8 @@ public class EpicasAlbumMode : ShipLogMode
     public AlbumStore Store;
 
     private AlbumLayout _layout;
+    private List<string> _lastSnapshotNames;
+
     private OWAudioSource _oneShotSource;
     private ScreenPromptList _centerPromptList;
 
@@ -29,33 +29,51 @@ public class EpicasAlbumMode : ShipLogMode
 
         _layout = AlbumLayout.Create(gameObject, oneShotSource);
         _layout.SetName(Name);
+        // TODO: Translation
+        _layout.SetEmptyMessage("Empty album, upload your scout snapshots to view them here!");
     }
 
     public override void EnterMode(string entryID = "", List<ShipLogFact> revealQueue = null)
     {
         // TODO: If empty?
-        List<Func<Sprite>> sprites = new();
-        foreach (string snapshotName in Store.SnapshotNames)
-        {
-            Func<Sprite> spriteProvider = () => Store.GetSprite(snapshotName);
-            sprites.Add(spriteProvider);
-        }
-        _layout.sprites = sprites;
+        UpdateSnaphots();
         _oneShotSource.PlayOneShot(AudioType.ToolProbeTakePhoto);
         _layout.Open();
 
-        Locator.GetPromptManager().AddScreenPrompt(_showOnDiskPrompt, _centerPromptList, TextAnchor.MiddleCenter, -1, true);
-        Locator.GetPromptManager().AddScreenPrompt(_deletePrompt, _centerPromptList, TextAnchor.MiddleCenter, -1, true);
+        Locator.GetPromptManager().AddScreenPrompt(_showOnDiskPrompt, _centerPromptList, TextAnchor.MiddleCenter);
+        Locator.GetPromptManager().AddScreenPrompt(_deletePrompt, _centerPromptList, TextAnchor.MiddleCenter);
+    }
+
+    private void UpdateSnaphots()
+    {
+        if (_lastSnapshotNames == null || !Store.SnapshotNames.SequenceEqual(_lastSnapshotNames))
+        {
+            _lastSnapshotNames = Store.SnapshotNames.ToList(); // Make sure to copy...
+            // Show new ones on top!
+            List<Func<Sprite>> sprites = new();
+            for (var i = _lastSnapshotNames.Count - 1; i >= 0; i--)
+            {
+                string snapshotName = _lastSnapshotNames[i];
+                Func<Sprite> spriteProvider = () => Store.GetSprite(snapshotName);
+                sprites.Add(spriteProvider);
+            }
+            _layout.sprites = sprites;
+        }
     }
 
     public override void UpdateMode()
     {
         _layout.UpdateLayout();
 
-        if (OWInput.IsNewlyPressed(InputLibrary.toolActionPrimary))
-        {
-            // TODO: Could SnapshotNames change???
-            Store.ShowOnDisk(Store.SnapshotNames[_layout.selectedIndex]);
+        bool snapshotsAvailable = _lastSnapshotNames.Count > 0;
+        _showOnDiskPrompt.SetVisibility(snapshotsAvailable);
+        _deletePrompt.SetVisibility(snapshotsAvailable);
+        if (snapshotsAvailable) {
+            if (OWInput.IsNewlyPressed(InputLibrary.toolActionPrimary))
+            {
+                // TODO: Could SnapshotNames change???
+                Store.ShowOnDisk(Store.SnapshotNames[_layout.selectedIndex]);
+            }
         }
     }
 

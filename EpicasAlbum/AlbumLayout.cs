@@ -22,7 +22,8 @@ public class AlbumLayout : MonoBehaviour
     private GridNavigator _gridNavigator;
     private OWAudioSource _oneShotSource; // TODO: Remove from Create (ItemList like)?
     private CanvasGroupAnimator _animator;
-    private TextWithBackground _nameLabel;
+    private TextWithBackground _nameLabel; // TODO: Corner Label (generic)
+    private TextWithBackground _emptyLabel; // TODO: Center Label (generic)
 
     public int selectedIndex;
     public List<Func<Sprite>> sprites = new(); // TODO: Can be used for animations?
@@ -88,13 +89,15 @@ public class AlbumLayout : MonoBehaviour
         albumLayout._animator = albumLayoutGo.AddComponent<CanvasGroupAnimator>();
         albumLayout._animator.SetImmediate(1f, new Vector3(1f, 0f, 1f));
 
-        albumLayout._nameLabel = TextWithBackground.Create();
-        albumLayout._nameLabel.SetBackgroundColor(DEFAULT_BORDER);
-        albumLayout._nameLabel.SetPadding(7);
-        albumLayout._nameLabel.SetFontSize(28);
         // TODO: Avoid this?
         GameObject mapModeTextLabel = GameObject.Find("Ship_Body/Module_Cabin/Systems_Cabin/ShipLogPivot/ShipLog/ShipLogPivot/ShipLogCanvas/MapMode/NamePanelRoot/Name");
         Font font = mapModeTextLabel.GetComponent<Text>().font;
+
+        albumLayout._nameLabel = TextWithBackground.Create();
+        albumLayout._nameLabel.name = "NameLabel";
+        albumLayout._nameLabel.SetBackgroundColor(DEFAULT_BORDER);
+        albumLayout._nameLabel.SetPadding(7);
+        albumLayout._nameLabel.SetFontSize(24);
         albumLayout._nameLabel.SetFont(font);
         RectTransform nameLabelRect = albumLayout._nameLabel.GetComponent<RectTransform>();
         nameLabelRect.parent = albumLayoutRect;
@@ -105,6 +108,22 @@ public class AlbumLayout : MonoBehaviour
         nameLabelRect.anchorMax = new Vector2(1, 0);
         nameLabelRect.pivot = new Vector2(1, 0);
         nameLabelRect.anchoredPosition = new Vector2(-27, 25); // Hardcoded to be next to border...
+        
+        albumLayout._emptyLabel = TextWithBackground.Create();
+        albumLayout._emptyLabel.name = "EmptyLabel";
+        albumLayout._emptyLabel.SetBackgroundColor(SELECT_BORDER);
+        albumLayout._emptyLabel.SetPadding(7);
+        albumLayout._emptyLabel.SetFontSize(21);
+        albumLayout._emptyLabel.SetFont(font);
+        RectTransform emptyLabelRect = albumLayout._emptyLabel.GetComponent<RectTransform>();
+        emptyLabelRect.parent = albumLayoutRect;
+        emptyLabelRect.localPosition = Vector3.zero;
+        emptyLabelRect.localEulerAngles = Vector3.zero;
+        emptyLabelRect.localScale = Vector3.one;
+        emptyLabelRect.anchorMin = Vector2.zero;
+        emptyLabelRect.anchorMax = Vector2.one;
+        emptyLabelRect.pivot = new Vector2(0.5f, 0.5f);
+        emptyLabelRect.anchoredPosition = Vector2.zero;
 
         return albumLayout;
     }
@@ -161,8 +180,21 @@ public class AlbumLayout : MonoBehaviour
 
     private void UpdateLayoutUI()
     {
+        if (sprites.Count == 0)
+        {
+            _bigImage.SetVisible(false);
+            foreach (BorderedImage gridImage in _gridImages)
+            {
+                gridImage.SetVisible(false);
+            }
+            _emptyLabel.gameObject.SetActive(true);
+            return;
+        }
+        
+        _emptyLabel.gameObject.SetActive(false);
+
         // Make this load before any of the grid images => guaranteed not null
-        _bigImage.SetVisible(true); // Just in case sprite was null, but it shouldn't
+        _bigImage.SetVisible(true); // Just in case sprite was null, but it shouldn't, but also if it was empty before
         _bigImage.DisplaySprite(sprites[selectedIndex].Invoke());
 
         // TODO: Less complicated way to calculate this?
@@ -203,8 +235,13 @@ public class AlbumLayout : MonoBehaviour
         }
     }
 
-    public void SetName(string name)
+    public void SetName(string nameValue)
     {
-        _nameLabel.SetText(name);
+        _nameLabel.SetText(nameValue);
+    }
+    
+    public void SetEmptyMessage(string message)
+    {
+        _emptyLabel.SetText(message);
     }
 }
