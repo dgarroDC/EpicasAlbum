@@ -114,17 +114,23 @@ public class AlbumLayout : MonoBehaviour
             {
                 // TODO: Less complicated way to calculate this?
                 // Note that we don't use GRID_ROWS here, the "real" number of rows is totalRows
-                int selectedColumn = selectedIndex % GRID_COLUMNS + (int)selectionChange.x;
-                selectedColumn = (selectedColumn + GRID_COLUMNS) % GRID_COLUMNS;
                 int selectedRow = selectedIndex / GRID_COLUMNS + (int)selectionChange.y;
                 int totalRows = (sprites.Count - 1) / GRID_COLUMNS + 1; // ie: row index of the last sprite + 1
                 selectedRow = (selectedRow + totalRows) % totalRows;
-                selectedIndex = selectedRow * GRID_COLUMNS + selectedColumn;
-                // Non-complete last row case
-                if (selectedIndex >= sprites.Count)
+
+                int selectedColumn = selectedIndex % GRID_COLUMNS + (int)selectionChange.x;
+                // Important to calculated the "final selected row" before this
+                int selectedRowLenght = (selectedRow == totalRows -1)? ((sprites.Count - 1) % GRID_COLUMNS + 1) : GRID_COLUMNS;
+                if (selectionChange.y != 0 && selectedColumn >= selectedRowLenght)
                 {
-                    selectedIndex = sprites.Count - 1;
+                    // Don't use mod here, we always want to land on last image in this case
+                    selectedColumn = selectedRowLenght - 1;
                 }
+                else
+                {
+                    selectedColumn = (selectedColumn + selectedRowLenght) % selectedRowLenght;
+                }
+                selectedIndex = selectedRow * GRID_COLUMNS + selectedColumn;
 
                 _oneShotSource.PlayOneShot(AudioType.ShipLogMoveBetweenEntries);
             }
