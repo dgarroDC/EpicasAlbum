@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace EpicasAlbum;
+namespace EpicasAlbum.UI;
 
 public class AlbumLayout : MonoBehaviour
 {

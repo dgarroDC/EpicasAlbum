@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 
-namespace EpicasAlbum;
+namespace EpicasAlbum.UI;
 
 public class TextWithBackground : MonoBehaviour
 {

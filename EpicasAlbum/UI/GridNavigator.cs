@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace EpicasAlbum;
+namespace EpicasAlbum.UI;
 
 // Based on ListNavigator from Suit Log/Custom Ship Log Modes, but not using the Input thing this time...
 public class GridNavigator : MonoBehaviour

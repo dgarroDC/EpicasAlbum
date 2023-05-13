@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using EpicasAlbum.CustomShipLogModes;
-using OWML.Common;
 using OWML.ModHelper;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace EpicasAlbum;
 
