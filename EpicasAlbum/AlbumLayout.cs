@@ -112,8 +112,20 @@ public class AlbumLayout : MonoBehaviour
             selectionChange = _gridNavigator.GetSelectionChange();
             if (selectionChange != Vector2.zero)
             {
-                selectedIndex += (int)selectionChange.y * GRID_COLUMNS + (int)selectionChange.x;
-                // TODO: Range checks etc.
+                // TODO: Less complicated way to calculate this?
+                // Note that we don't use GRID_ROWS here, the "real" number of rows is totalRows
+                int selectedColumn = selectedIndex % GRID_COLUMNS + (int)selectionChange.x;
+                selectedColumn = (selectedColumn + GRID_COLUMNS) % GRID_COLUMNS;
+                int selectedRow = selectedIndex / GRID_COLUMNS + (int)selectionChange.y;
+                int totalRows = (sprites.Count - 1) / GRID_COLUMNS + 1; // ie: row index of the last sprite + 1
+                selectedRow = (selectedRow + totalRows) % totalRows;
+                selectedIndex = selectedRow * GRID_COLUMNS + selectedColumn;
+                // Non-complete last row case
+                if (selectedIndex >= sprites.Count)
+                {
+                    selectedIndex = sprites.Count - 1;
+                }
+
                 _oneShotSource.PlayOneShot(AudioType.ShipLogMoveBetweenEntries);
             }
         }

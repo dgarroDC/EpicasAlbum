@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using UnityEngine;
@@ -60,7 +61,7 @@ public class AlbumStore
         byte[] data = File.ReadAllBytes(Path.Combine(_folder, fileName));
         Texture2D texture = new Texture2D(2, 2);
         texture.name = fileName;
-        texture.LoadImage(data);
+        texture.LoadImage(data); // Slow!!!
         _loadedTextures.Add(fileName, texture);
         return texture;
     }
