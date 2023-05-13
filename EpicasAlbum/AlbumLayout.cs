@@ -22,6 +22,7 @@ public class AlbumLayout : MonoBehaviour
     private GridNavigator _gridNavigator;
     private OWAudioSource _oneShotSource; // TODO: Remove from Create (ItemList like)?
     private CanvasGroupAnimator _animator;
+    private TextWithBackground _nameLabel;
 
     public int selectedIndex;
     public List<Func<Sprite>> sprites = new(); // TODO: Can be used for animations?
@@ -36,13 +37,13 @@ public class AlbumLayout : MonoBehaviour
         albumLayoutRect.localScale = Vector3.one;
         albumLayoutRect.anchorMin = Vector2.zero;
         albumLayoutRect.anchorMax = Vector2.one;
-        albumLayoutRect.pivot = Vector2.zero; // For the animation (from left)
+        albumLayoutRect.pivot = Vector2.zero; // For the animation (from bellow)
         albumLayoutRect.offsetMin = Vector2.zero;
         albumLayoutRect.offsetMax = Vector2.zero;
 
         BorderedImage borderedImage = BorderedImage.Create();
 
-        albumLayout._bigImage = Instantiate(borderedImage, albumLayout.transform);
+        albumLayout._bigImage = Instantiate(borderedImage, albumLayoutRect);
         albumLayout._bigImage.name = "BigImage";
         albumLayout._bigImage.SetBorderColor(DEFAULT_BORDER);
         albumLayout._bigImage.SetBorderSize(2);
@@ -56,7 +57,7 @@ public class AlbumLayout : MonoBehaviour
 
         GameObject gridGo = new GameObject("Grid", typeof(GridLayoutGroup));
         RectTransform gridRect = gridGo.GetComponent<RectTransform>();
-        gridRect.parent = albumLayout.transform;
+        gridRect.parent = albumLayoutRect;
         gridRect.localPosition = Vector3.zero;
         gridRect.localEulerAngles = Vector3.zero;
         gridRect.localScale = Vector3.one;
@@ -85,7 +86,25 @@ public class AlbumLayout : MonoBehaviour
         albumLayout._oneShotSource = oneShotSource;
 
         albumLayout._animator = albumLayoutGo.AddComponent<CanvasGroupAnimator>();
-        albumLayout._animator.SetImmediate(1f, new Vector3(0f, 1f, 1f));
+        albumLayout._animator.SetImmediate(1f, new Vector3(1f, 0f, 1f));
+
+        albumLayout._nameLabel = TextWithBackground.Create();
+        albumLayout._nameLabel.SetBackgroundColor(DEFAULT_BORDER);
+        albumLayout._nameLabel.SetPadding(7);
+        albumLayout._nameLabel.SetFontSize(28);
+        // TODO: Avoid this?
+        GameObject mapModeTextLabel = GameObject.Find("Ship_Body/Module_Cabin/Systems_Cabin/ShipLogPivot/ShipLog/ShipLogPivot/ShipLogCanvas/MapMode/NamePanelRoot/Name");
+        Font font = mapModeTextLabel.GetComponent<Text>().font;
+        albumLayout._nameLabel.SetFont(font);
+        RectTransform nameLabelRect = albumLayout._nameLabel.GetComponent<RectTransform>();
+        nameLabelRect.parent = albumLayoutRect;
+        nameLabelRect.localPosition = Vector3.zero;
+        nameLabelRect.localEulerAngles = Vector3.zero;
+        nameLabelRect.localScale = Vector3.one;
+        nameLabelRect.anchorMin = new Vector2(1, 0);
+        nameLabelRect.anchorMax = new Vector2(1, 0);
+        nameLabelRect.pivot = new Vector2(1, 0);
+        nameLabelRect.anchoredPosition = new Vector2(-27, 25); // Hardcoded to be next to border...
 
         return albumLayout;
     }
@@ -98,7 +117,7 @@ public class AlbumLayout : MonoBehaviour
 
     public void Close()
     {
-        _animator.AnimateTo(1f, new Vector3(0f, 1f, 1f), 0.3f);
+        _animator.AnimateTo(1f, new Vector3(1f, 0f, 1f), 0.3f);
     }
 
     // TODO: Another name? Return delta?
@@ -182,5 +201,10 @@ public class AlbumLayout : MonoBehaviour
                 gridImage.SetVisible(false);
             }
         }
+    }
+
+    public void SetName(string name)
+    {
+        _nameLabel.SetText(name);
     }
 }

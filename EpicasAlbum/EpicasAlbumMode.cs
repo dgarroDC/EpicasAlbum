@@ -17,6 +17,7 @@ public class EpicasAlbumMode : ShipLogMode
     private ScreenPromptList _centerPromptList;
 
     private ScreenPrompt _showOnDiskPrompt;
+    private ScreenPrompt _deletePrompt;
 
     public override void Initialize(ScreenPromptList centerPromptList, ScreenPromptList upperRightPromptList, OWAudioSource oneShotSource)
     {
@@ -24,8 +25,10 @@ public class EpicasAlbumMode : ShipLogMode
         _centerPromptList = centerPromptList;
         // TODO: Translation
         _showOnDiskPrompt = new ScreenPrompt(InputLibrary.toolActionPrimary, "Show on Disk");
-        
+        _deletePrompt = new ScreenPrompt(InputLibrary.toolActionSecondary, "Delete");
+
         _layout = AlbumLayout.Create(gameObject, oneShotSource);
+        _layout.SetName(Name);
     }
 
     public override void EnterMode(string entryID = "", List<ShipLogFact> revealQueue = null)
@@ -42,6 +45,7 @@ public class EpicasAlbumMode : ShipLogMode
         _layout.Open();
 
         Locator.GetPromptManager().AddScreenPrompt(_showOnDiskPrompt, _centerPromptList, TextAnchor.MiddleCenter, -1, true);
+        Locator.GetPromptManager().AddScreenPrompt(_deletePrompt, _centerPromptList, TextAnchor.MiddleCenter, -1, true);
     }
 
     public override void UpdateMode()
@@ -60,6 +64,7 @@ public class EpicasAlbumMode : ShipLogMode
         _layout.Close();
 
         Locator.GetPromptManager().RemoveScreenPrompt(_showOnDiskPrompt);
+        Locator.GetPromptManager().RemoveScreenPrompt(_deletePrompt);
     }
 
     public override void OnEnterComputer()
