@@ -7,7 +7,6 @@ using UnityEngine;
 
 namespace EpicasAlbum;
 
-// TODO: fileName -> snapshotName?
 public class AlbumStore
 {
     private string _folder;
@@ -35,7 +34,7 @@ public class AlbumStore
         string baseName = $"{DateTime.Now:yyyy-MM-dd_HH-mm-ss}";
         string fileName = baseName + ".png";
         int num = 1;
-        while (File.Exists(Path.Combine(_folder, fileName)))
+        while (File.Exists(GetPath(fileName)))
         {
             fileName = $"{baseName}_{num}.png";
             num++;
@@ -46,11 +45,11 @@ public class AlbumStore
         _loadedTextures.Add(fileName, snapshotTexture);
     }
 
-    public Texture2D GetTexture(string fileName)
+    public Texture2D GetTexture(string snapshotName)
     {
-        if (_loadedTextures.ContainsKey(fileName))
+        if (_loadedTextures.ContainsKey(snapshotName))
         {
-            return _loadedTextures[fileName];
+            return _loadedTextures[snapshotName];
         }
         if (EpicasAlbum.Instance.texturesLoadedThisFrame > 0)
         {
@@ -58,22 +57,27 @@ public class AlbumStore
         }
         EpicasAlbum.Instance.texturesLoadedThisFrame++;
         
-        byte[] data = File.ReadAllBytes(Path.Combine(_folder, fileName));
+        byte[] data = File.ReadAllBytes(GetPath(snapshotName));
         Texture2D texture = new Texture2D(2, 2);
-        texture.name = fileName;
+        texture.name = snapshotName;
         texture.LoadImage(data); // Slow!!!
-        _loadedTextures.Add(fileName, texture);
+        _loadedTextures.Add(snapshotName, texture);
         return texture;
     }
 
-    public Sprite GetSprite(string fileName)
+    private string GetPath(string fileName)
     {
-        if (_loadedSprites.ContainsKey(fileName))
+        return Path.Combine(_folder, fileName);
+    }
+
+    public Sprite GetSprite(string snapshotName)
+    {
+        if (_loadedSprites.ContainsKey(snapshotName))
         {
-            return _loadedSprites[fileName];
+            return _loadedSprites[snapshotName];
         }
 
-        Texture2D texture = GetTexture(fileName);
+        Texture2D texture = GetTexture(snapshotName);
         if (texture == null)
         {
             return null;
@@ -82,8 +86,16 @@ public class AlbumStore
         // The mesh time seems to make a lot of difference in the time the sprite takes to create!  
         Sprite sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), 
             new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect);
-        sprite.name = fileName;
-        _loadedSprites.Add(fileName, sprite);
+        sprite.name = snapshotName;
+        _loadedSprites.Add(snapshotName, sprite);
         return sprite;
+    }
+
+    public void ShowOnDisk(string snapshotName)
+    {
+        // Application.OpenURL("file://" + GetPath(snapshotName));
+        // TODO: Linux support?
+        string path = GetPath(snapshotName).Replace(@"/", @"\");   // explorer doesn't like front slashes
+        Process.Start("explorer.exe", "/select," + path);
     }
 }

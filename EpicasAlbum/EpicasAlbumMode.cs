@@ -14,10 +14,17 @@ public class EpicasAlbumMode : ShipLogMode
 
     private AlbumLayout _layout;
     private OWAudioSource _oneShotSource;
+    private ScreenPromptList _centerPromptList;
+
+    private ScreenPrompt _showOnDiskPrompt;
 
     public override void Initialize(ScreenPromptList centerPromptList, ScreenPromptList upperRightPromptList, OWAudioSource oneShotSource)
     {
         _oneShotSource = oneShotSource;
+        _centerPromptList = centerPromptList;
+        // TODO: Translation
+        _showOnDiskPrompt = new ScreenPrompt(InputLibrary.toolActionPrimary, "Show on Disk");
+        
         _layout = AlbumLayout.Create(gameObject, oneShotSource);
     }
 
@@ -33,16 +40,26 @@ public class EpicasAlbumMode : ShipLogMode
         _layout.sprites = sprites;
         _oneShotSource.PlayOneShot(AudioType.ToolProbeTakePhoto);
         _layout.Open();
+
+        Locator.GetPromptManager().AddScreenPrompt(_showOnDiskPrompt, _centerPromptList, TextAnchor.MiddleCenter, -1, true);
     }
 
     public override void UpdateMode()
     {
         _layout.UpdateLayout();
+
+        if (OWInput.IsNewlyPressed(InputLibrary.toolActionPrimary))
+        {
+            // TODO: Could SnapshotNames change???
+            Store.ShowOnDisk(Store.SnapshotNames[_layout.selectedIndex]);
+        }
     }
 
     public override void ExitMode()
     {
         _layout.Close();
+
+        Locator.GetPromptManager().RemoveScreenPrompt(_showOnDiskPrompt);
     }
 
     public override void OnEnterComputer()
