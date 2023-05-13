@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using EpicasAlbum.CustomShipLogModes;
 using OWML.Common;
 using OWML.ModHelper;
@@ -56,18 +58,30 @@ public class EpicasAlbum : ModBehaviour
     private void Update()
     {
         if (!_setupDone) return;
- 
-        // TODO: Any probe launcher?
-        ProbeLauncher probeLauncher = Locator.GetToolModeSwapper().GetProbeLauncher();
-        Image image = probeLauncher._launcherUIs[1]._image; // 0 other?
-        _uploadPrompt.SetVisibility(image.enabled);
-        if (image.enabled) // TODO: Not on map and menu/paused? Prevent retake? Lockon?
+
+        bool enabled = false;
+        ProbeLauncher activeLauncher = null;
+
+        ToolModeSwapper toolModeSwapper = Locator.GetToolModeSwapper();
+        if (toolModeSwapper.IsInToolMode(ToolMode.Probe))
         {
+            // This could be either the player one or the ship one
+            activeLauncher = toolModeSwapper._equippedTool as ProbeLauncher;
+            if (activeLauncher.AllowInput())
+            {
+                enabled = activeLauncher.AllowInput() && activeLauncher._launcherUIs.Any(ui => ui._image.enabled);
+            }
+        }
+
+        _uploadPrompt.SetVisibility(enabled);
+        if (enabled)
+        {
+            // Conflict with lock om. So it goes.
             if (OWInput.IsNewlyPressed(InputLibrary.lockOn))
             {
-                _store.Save(probeLauncher._lastSnapshot.ToTexture2D());
+                _store.Save(activeLauncher._lastSnapshot.ToTexture2D());
                 // TODO: Translation
-                NotificationData notification = new NotificationData(NotificationTarget.Player, "SNAPSHOT UPLOADED");
+                NotificationData notification = new NotificationData(NotificationTarget.All, "SNAPSHOT UPLOADED");
                 NotificationManager.SharedInstance.PostNotification(notification);
             }
         }
