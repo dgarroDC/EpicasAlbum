@@ -44,7 +44,7 @@ public class EpicasAlbumMode : ShipLogMode
         // TODO: Translation
         _layout.SetEmptyMessage("Empty album, upload your scout snapshots to view them here!");
         
-        ItemList.SetName("Delete Épica");
+        ItemList.SetName("Delete Snapshot?");
         _itemListPhoto = ItemList.GetPhoto();
         _itemListPhoto.gameObject.SetActive(true);
         _itemListPhoto.preserveAspect = true; 
