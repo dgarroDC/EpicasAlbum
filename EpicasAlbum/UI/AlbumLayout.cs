@@ -26,6 +26,7 @@ public class AlbumLayout : MonoBehaviour
 
     public int selectedIndex;
     public List<Func<Sprite>> sprites = new(); // TODO: Can be used for animations?
+    public ScreenPromptList promptList;
 
     public static AlbumLayout Create(GameObject albumLayoutGo, OWAudioSource oneShotSource)
     {
@@ -123,6 +124,23 @@ public class AlbumLayout : MonoBehaviour
         emptyLabelRect.anchorMax = Vector2.one;
         emptyLabelRect.pivot = new Vector2(0.5f, 0.5f);
         emptyLabelRect.anchoredPosition = Vector2.zero;
+        
+        GameObject promptListGo = new GameObject("PromptList", typeof(HorizontalLayoutGroup), typeof(ScreenPromptList));
+        RectTransform promptListRect = promptListGo.GetComponent<RectTransform>();
+        promptListRect.parent = albumLayoutRect;
+        promptListRect.localPosition = Vector3.zero;
+        promptListRect.localEulerAngles = Vector3.zero;
+        promptListRect.localScale = Vector3.one;
+        promptListRect.anchorMin = new Vector2(1, 0);
+        promptListRect.anchorMax = new Vector2(1, 0);
+        promptListRect.pivot = Vector2.zero;
+        promptListRect.anchoredPosition = new Vector2(-515, 65); // Hardcoded...
+        promptListRect.sizeDelta = new Vector2(515, 25);
+        albumLayout.promptList = promptListGo.GetComponent<ScreenPromptList>();
+        HorizontalLayoutGroup promptListLayoutGroup = promptListGo.GetComponent<HorizontalLayoutGroup>();
+        promptListLayoutGroup.spacing = 10;
+        promptListLayoutGroup.childForceExpandWidth = false;
+        promptListLayoutGroup.childForceExpandHeight = false;
 
         return albumLayout;
     }

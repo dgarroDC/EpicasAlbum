@@ -19,7 +19,6 @@ public class EpicasAlbumMode : ShipLogMode
     private List<string> _lastSnapshotNames;
 
     private OWAudioSource _oneShotSource;
-    private ScreenPromptList _centerPromptList;
     private ScreenPromptList _upperRightPromptList;
 
     private ScreenPrompt _showOnDiskPrompt;
@@ -33,7 +32,6 @@ public class EpicasAlbumMode : ShipLogMode
     public override void Initialize(ScreenPromptList centerPromptList, ScreenPromptList upperRightPromptList, OWAudioSource oneShotSource)
     {
         _oneShotSource = oneShotSource;
-        _centerPromptList = centerPromptList;
         _upperRightPromptList = upperRightPromptList;
         // TODO: Translation
         _showOnDiskPrompt = new ScreenPrompt(InputLibrary.toolActionPrimary, "Show on Disk");
@@ -64,8 +62,8 @@ public class EpicasAlbumMode : ShipLogMode
         _oneShotSource.PlayOneShot(AudioType.ToolProbeTakePhoto);
         _layout.Open();
 
-        Locator.GetPromptManager().AddScreenPrompt(_showOnDiskPrompt, _centerPromptList, TextAnchor.MiddleCenter);
-        Locator.GetPromptManager().AddScreenPrompt(_deletePrompt, _centerPromptList, TextAnchor.MiddleCenter);
+        Locator.GetPromptManager().AddScreenPrompt(_showOnDiskPrompt, _layout.promptList, TextAnchor.MiddleCenter);
+        Locator.GetPromptManager().AddScreenPrompt(_deletePrompt, _layout.promptList, TextAnchor.MiddleCenter);
         Locator.GetPromptManager().AddScreenPrompt(_deleteCancelPrompt, _upperRightPromptList, TextAnchor.MiddleCenter);
         Locator.GetPromptManager().AddScreenPrompt(_deleteSelectPrompt, _upperRightPromptList, TextAnchor.MiddleCenter);
     }
