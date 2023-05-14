@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using OWML.Common;
 using UnityEngine;
 
 namespace EpicasAlbum;
@@ -10,7 +11,7 @@ namespace EpicasAlbum;
 public class AlbumStore
 {
     private string _folder;
-    public List<string> SnapshotNames = new();
+    public List<string> SnapshotNames;
     private Dictionary<string, Texture2D> _loadedTextures = new(); // TODO: Remove?
     private Dictionary<string, Sprite> _loadedSprites = new();
 
@@ -21,10 +22,13 @@ public class AlbumStore
         {
             Directory.CreateDirectory(folder);
         }
-        foreach (FileInfo file in new DirectoryInfo(folder).GetFiles().OrderBy(f => f.CreationTime))
-        {
-            SnapshotNames.Add(file.Name);
-        }
+
+        string[] extensions = { ".png", ".jpg" };
+        SnapshotNames = new DirectoryInfo(folder).GetFiles()
+            .Where(f => extensions.Contains(f.Extension.ToLower()))
+            .OrderBy(f => f.CreationTime)
+            .Select(f => f.Name)
+            .ToList();
     }
     
     public void Save(Texture2D snapshotTexture)
@@ -55,9 +59,16 @@ public class AlbumStore
         {
             return null;
         }
-        EpicasAlbum.Instance.texturesLoadedThisFrame++;
         
-        byte[] data = File.ReadAllBytes(GetPath(snapshotName));
+        string path = GetPath(snapshotName);
+        if (!File.Exists(path))
+        {
+            EpicasAlbum.Instance.ModHelper.Console.WriteLine($"File {path} not found, manually deleted?", MessageType.Error);
+            return null;
+        }
+
+        EpicasAlbum.Instance.texturesLoadedThisFrame++;
+        byte[] data = File.ReadAllBytes(path);
         Texture2D texture = new Texture2D(2, 2);
         texture.name = snapshotName;
         texture.LoadImage(data); // Slow!!!
