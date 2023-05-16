@@ -23,6 +23,7 @@ public class AlbumLayout : MonoBehaviour
     private CanvasGroupAnimator _animator;
     private TextWithBackground _nameLabel; // TODO: Corner Label (generic)
     private TextWithBackground _emptyLabel; // TODO: Center Label (generic)
+    private Scrollbar _scrollbar;
 
     public int selectedIndex;
     public List<Func<Sprite>> sprites = new(); // TODO: Can be used for animations?
@@ -33,9 +34,7 @@ public class AlbumLayout : MonoBehaviour
         RectTransform albumLayoutRect = albumLayoutGo.AddComponent<RectTransform>();
         AlbumLayout albumLayout = albumLayoutGo.AddComponent<AlbumLayout>();
         albumLayoutGo.transform.SetSiblingIndex(1); // So we get prompts and border mask over it, but not the background...
-        albumLayoutRect.localPosition = Vector3.zero;
-        albumLayoutRect.localEulerAngles = Vector3.zero;
-        albumLayoutRect.localScale = Vector3.one;
+        ResetTransform(albumLayoutRect);
         albumLayoutRect.anchorMin = Vector2.zero;
         albumLayoutRect.anchorMax = Vector2.one;
         albumLayoutRect.pivot = Vector2.zero; // For the animation (from bellow)
@@ -59,9 +58,7 @@ public class AlbumLayout : MonoBehaviour
         GameObject gridGo = new GameObject("Grid", typeof(GridLayoutGroup));
         RectTransform gridRect = gridGo.GetComponent<RectTransform>();
         gridRect.parent = albumLayoutRect;
-        gridRect.localPosition = Vector3.zero;
-        gridRect.localEulerAngles = Vector3.zero;
-        gridRect.localScale = Vector3.one;
+        ResetTransform(gridRect);
         // Centered vertically, offset from left
         gridRect.anchorMin = new Vector2(0, 0.5f);
         gridRect.anchorMax = new Vector2(0, 0.5f);
@@ -101,9 +98,7 @@ public class AlbumLayout : MonoBehaviour
         albumLayout._nameLabel.SetFont(font);
         RectTransform nameLabelRect = albumLayout._nameLabel.GetComponent<RectTransform>();
         nameLabelRect.parent = albumLayoutRect;
-        nameLabelRect.localPosition = Vector3.zero;
-        nameLabelRect.localEulerAngles = Vector3.zero;
-        nameLabelRect.localScale = Vector3.one;
+        ResetTransform(nameLabelRect);
         nameLabelRect.anchorMin = new Vector2(1, 0);
         nameLabelRect.anchorMax = new Vector2(1, 0);
         nameLabelRect.pivot = new Vector2(1, 0);
@@ -117,9 +112,7 @@ public class AlbumLayout : MonoBehaviour
         albumLayout._emptyLabel.SetFont(font);
         RectTransform emptyLabelRect = albumLayout._emptyLabel.GetComponent<RectTransform>();
         emptyLabelRect.parent = albumLayoutRect;
-        emptyLabelRect.localPosition = Vector3.zero;
-        emptyLabelRect.localEulerAngles = Vector3.zero;
-        emptyLabelRect.localScale = Vector3.one;
+        ResetTransform(emptyLabelRect);
         emptyLabelRect.anchorMin = Vector2.zero;
         emptyLabelRect.anchorMax = Vector2.one;
         emptyLabelRect.pivot = new Vector2(0.5f, 0.5f);
@@ -128,9 +121,7 @@ public class AlbumLayout : MonoBehaviour
         GameObject promptListGo = new GameObject("PromptList", typeof(HorizontalLayoutGroup), typeof(ScreenPromptList));
         RectTransform promptListRect = promptListGo.GetComponent<RectTransform>();
         promptListRect.parent = albumLayoutRect;
-        promptListRect.localPosition = Vector3.zero;
-        promptListRect.localEulerAngles = Vector3.zero;
-        promptListRect.localScale = Vector3.one;
+        ResetTransform(promptListRect);
         promptListRect.anchorMin = new Vector2(1, 0);
         promptListRect.anchorMax = new Vector2(1, 0);
         promptListRect.pivot = Vector2.zero;
@@ -142,7 +133,38 @@ public class AlbumLayout : MonoBehaviour
         promptListLayoutGroup.childForceExpandWidth = false;
         promptListLayoutGroup.childForceExpandHeight = false;
 
+        GameObject scrollbarGo = new GameObject("Scrollbar", typeof(Image), typeof(Scrollbar));
+        RectTransform scrollbarRect = scrollbarGo.GetComponent<RectTransform>();
+        scrollbarRect.parent = albumLayoutRect;
+        ResetTransform(scrollbarRect);
+        scrollbarRect.anchorMin = new Vector2(0.5f, 0.5f);
+        scrollbarRect.anchorMax = new Vector2(0.5f, 0.5f);
+        scrollbarRect.pivot = new Vector2(0.5f, 0.5f);
+        scrollbarRect.anchoredPosition = new Vector2(-12, 0); // Not centered, would cover big image...
+        scrollbarRect.sizeDelta = new Vector2(10, (GRID_ROWS - 2) * GRID_IMAGE_SIZE + (GRID_ROWS - 3) * GRID_SPACING);
+        Image scrollbarImage = scrollbarGo.GetComponent<Image>();
+        scrollbarImage.color = DEFAULT_BORDER;
+        albumLayout._scrollbar = scrollbarGo.GetComponent<Scrollbar>();
+        albumLayout._scrollbar.direction = Scrollbar.Direction.TopToBottom;
+
+        GameObject handleGo = new GameObject("Handle", typeof(Image));
+        RectTransform handleRect = handleGo.GetComponent<RectTransform>();
+        handleRect.parent = scrollbarRect;
+        albumLayout._scrollbar.handleRect = handleRect;
+        ResetTransform(handleRect);
+        handleRect.anchoredPosition = Vector2.zero;
+        handleRect.sizeDelta = Vector2.zero;
+        Image handleImage = handleGo.GetComponent<Image>();
+        handleImage.color = SELECT_BORDER;
+
         return albumLayout;
+    }
+
+    private static void ResetTransform(Transform transform)
+    {
+        transform.localPosition = Vector3.zero;
+        transform.localEulerAngles = Vector3.zero;
+        transform.localScale = Vector3.one;
     }
 
     public void Open()
@@ -204,6 +226,7 @@ public class AlbumLayout : MonoBehaviour
             {
                 gridImage.SetVisible(false);
             }
+            _scrollbar.gameObject.SetActive(false);
             _emptyLabel.gameObject.SetActive(true);
             return;
         }
@@ -250,6 +273,19 @@ public class AlbumLayout : MonoBehaviour
                 gridImage.SetVisible(false);
             }
         }
+        
+        // Scrollbar
+        if (sprites.Count <= (GRID_ROWS - 2) * GRID_COLUMNS)
+        {
+            _scrollbar.gameObject.SetActive(false);
+            return;
+        }
+        _scrollbar.gameObject.SetActive(true);
+        int totalRows = (sprites.Count - 1) / GRID_COLUMNS + 1; // Copied from other method...
+        int topRow = (offset + GRID_COLUMNS) / GRID_COLUMNS;
+        int visibleRows = GRID_ROWS - 2;
+        _scrollbar.value = (float)topRow / (totalRows - visibleRows); // Important to consider visibles!
+        _scrollbar.size = (float)visibleRows / totalRows;
     }
 
     public void SetName(string nameValue)
