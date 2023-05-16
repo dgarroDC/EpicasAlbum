@@ -8,7 +8,7 @@ namespace EpicasAlbum.UI;
 public class AlbumLayout : MonoBehaviour
 {
     private static Color DEFAULT_BORDER = new(0.3882f, 0.498f, 0.8431f);
-    private static Color SELECT_BORDER = new(1f, 0.6429f, 0.191f);
+    private static Color SELECT_BORDER = new(0.9333f, 0.5569f, 0.2314f);
     private const int HORIZONTAL_OFFSET = 50;
     private const int BIG_IMAGE_SIZE = 470;
     private const int GRID_IMAGE_SIZE = 100;
@@ -285,7 +285,7 @@ public class AlbumLayout : MonoBehaviour
         int topRow = (offset + GRID_COLUMNS) / GRID_COLUMNS;
         int visibleRows = GRID_ROWS - 2;
         _scrollbar.value = (float)topRow / (totalRows - visibleRows); // Important to consider visibles!
-        _scrollbar.size = (float)visibleRows / totalRows;
+        _scrollbar.size = Math.Max((float)visibleRows / totalRows, 0.025f);
     }
 
     public void SetName(string nameValue)
