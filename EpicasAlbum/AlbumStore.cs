@@ -26,7 +26,7 @@ public class AlbumStore
         string[] extensions = { ".png", ".jpg" };
         SnapshotNames = new DirectoryInfo(folder).GetFiles()
             .Where(f => extensions.Contains(f.Extension.ToLower()))
-            .OrderBy(f => f.Name)
+            .OrderBy(f => f.CreationTime)
             .Select(f => f.Name)
             .ToList();
     }
