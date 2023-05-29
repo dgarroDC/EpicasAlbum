@@ -1,8 +1,12 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using EpicasAlbum.CustomShipLogModes;
 using OWML.ModHelper;
+using Starfield;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace EpicasAlbum;
 
@@ -14,6 +18,8 @@ public class EpicasAlbum : ModBehaviour
     private bool _setupDone;
     private ScreenPrompt _uploadPrompt;
     private AlbumStore _store;
+
+    private List<Tuple<Vector3, RectTransform, GameObject>> _stars = new();
 
     private void Start()
     {
@@ -53,12 +59,41 @@ public class EpicasAlbum : ModBehaviour
             epicasAlbumMode.ItemList = new ItemListWrapper(customShipLogModesAPI, itemList);
             customShipLogModesAPI.AddMode(epicasAlbumMode, () => true, () => EpicasAlbumMode.Name);
         });
+
+        StarfieldController starfieldController = FindObjectOfType<StarfieldController>();
+        StarGroup[] groups = starfieldController._starfieldData.starGroups;
+        StarInstance[] stars = groups[5].stars;
+        Canvas canvas = new GameObject("Canvas", typeof(Canvas)).GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        foreach (StarInstance starInstance in stars)
+        {
+            GameObject star = new GameObject("Star", typeof(Image));
+            RectTransform rect = star.GetComponent<RectTransform>();
+            rect.transform.parent = canvas.transform;
+            GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            sphere.transform.parent = starfieldController.transform;
+            _stars.Add(new Tuple<Vector3, RectTransform, GameObject>(starInstance.position, rect, sphere));
+        }
     }
 
     private void Update()
     {
         if (!_setupDone) return;
 
+        Camera cam = Locator.GetActiveCamera().mainCamera;
+        bool p = OWInput.IsNewlyPressed(InputLibrary.autopilot);
+        Locator.GetCenterOfTheUniverse().RecenterUniverseAroundPlayer();
+        foreach (var tuple in _stars)
+        {
+            Vector3 pos = cam.WorldToViewportPoint(tuple.Item1);
+            tuple.Item2.anchoredPosition = new Vector2(1920 * pos.x, 1080 * pos.y);
+            tuple.Item3.transform.position = tuple.Item1;// - Locator.GetPlayerTransform().position;
+            if (p)
+            {
+                tuple.Item3.SetActive(!tuple.Item3.activeSelf);
+            }
+        }
+        
         bool enabled = false;
         ProbeLauncher activeLauncher = null;
 

@@ -116,6 +116,10 @@ public class EpicasAlbumMode : ShipLogMode
                 ItemList.SetSelectedIndex(0);
                 _oneShotSource.PlayOneShot(AudioType.ShipLogSelectPlanet);
             }
+            if (OWInput.IsNewlyPressed(InputLibrary.markEntryOnHUD))
+            {
+                _layout.sprites.AddRange(_layout.sprites);
+            }
         }
 
         if (_deleteDialogOpen)
