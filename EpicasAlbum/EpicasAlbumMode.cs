@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using EpicasAlbum.CustomShipLogModes;
 using EpicasAlbum.UI;
+using OWML.Common;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -24,10 +25,19 @@ public class EpicasAlbumMode : ShipLogMode
     private ScreenPrompt _showOnDiskPrompt;
     private ScreenPrompt _deletePrompt;
 
-    private bool _deleteDialogOpen;
+    private State _currentState;
     private Image _itemListPhoto;
     private ScreenPrompt _deleteSelectPrompt;
     private ScreenPrompt _deleteCancelPrompt;
+
+    // Same as I did for Journal
+    public enum State
+    {
+        Disabled,
+        Main,
+        Deleting,
+        Choosing
+    }
 
     public override void Initialize(ScreenPromptList centerPromptList, ScreenPromptList upperRightPromptList, OWAudioSource oneShotSource)
     {
@@ -53,11 +63,12 @@ public class EpicasAlbumMode : ShipLogMode
         items.Add(new Tuple<string, bool, bool, bool>("Yes", false, false, false));
         items.Add(new Tuple<string, bool, bool, bool>("No", false, false, false));
         ItemList.SetItems(items);
+
+        _currentState = State.Disabled;
     }
 
     public override void EnterMode(string entryID = "", List<ShipLogFact> revealQueue = null)
     {
-        // TODO: If empty?
         UpdateSnaphots();
         _oneShotSource.PlayOneShot(AudioType.ToolProbeTakePhoto);
         _layout.Open();
@@ -66,6 +77,12 @@ public class EpicasAlbumMode : ShipLogMode
         Locator.GetPromptManager().AddScreenPrompt(_deletePrompt, _layout.promptList, TextAnchor.MiddleCenter);
         Locator.GetPromptManager().AddScreenPrompt(_deleteCancelPrompt, _upperRightPromptList, TextAnchor.MiddleCenter);
         Locator.GetPromptManager().AddScreenPrompt(_deleteSelectPrompt, _upperRightPromptList, TextAnchor.MiddleCenter);
+
+        if (_currentState != State.Disabled)
+        {
+            EpicasAlbum.Instance.ModHelper.Console.WriteLine($"Unexpected state {_currentState} on enter!", MessageType.Error);
+        }
+        _currentState = State.Main;
     }
 
     private void UpdateSnaphots()
@@ -87,7 +104,7 @@ public class EpicasAlbumMode : ShipLogMode
 
     public override void UpdateMode()
     {
-        if (!_deleteDialogOpen)
+        if (_currentState == State.Main)
         {
             _layout.UpdateLayout();
         }
@@ -97,11 +114,11 @@ public class EpicasAlbumMode : ShipLogMode
         }
 
         bool snapshotsAvailable = _lastSnapshotNames.Count > 0;
-        bool snapshotSelectedInAlbum = !_deleteDialogOpen && snapshotsAvailable;
+        bool snapshotSelectedInAlbum = _currentState == State.Main && snapshotsAvailable;
         _showOnDiskPrompt.SetVisibility(snapshotSelectedInAlbum);
         _deletePrompt.SetVisibility(snapshotSelectedInAlbum);
-        _deleteCancelPrompt.SetVisibility(_deleteDialogOpen);
-        _deleteSelectPrompt.SetVisibility(_deleteDialogOpen);
+        _deleteCancelPrompt.SetVisibility(_currentState == State.Deleting);
+        _deleteSelectPrompt.SetVisibility(_currentState == State.Deleting);
 
         if (snapshotSelectedInAlbum) {
             if (OWInput.IsNewlyPressed(InputLibrary.toolActionPrimary))
@@ -110,7 +127,7 @@ public class EpicasAlbumMode : ShipLogMode
             }
             if (OWInput.IsNewlyPressed(InputLibrary.toolActionSecondary))
             {
-                _deleteDialogOpen = true;
+                _currentState = State.Deleting;
                 ItemList.GetPhoto().sprite = Store.GetSprite(GetSelectedSnapshotName());
                 ItemList.Open();
                 ItemList.SetSelectedIndex(0);
@@ -118,7 +135,7 @@ public class EpicasAlbumMode : ShipLogMode
             }
         }
 
-        if (_deleteDialogOpen)
+        if (_currentState == State.Deleting)
         {
             bool closeDialog = false;
             if (OWInput.IsNewlyPressed(InputLibrary.interact))
@@ -142,7 +159,7 @@ public class EpicasAlbumMode : ShipLogMode
 
             if (closeDialog)
             {
-                _deleteDialogOpen = false;
+                _currentState = State.Main;
                 ItemList.Close();
                 _oneShotSource.PlayOneShot(AudioType.ShipLogDeselectPlanet);
             }
@@ -163,6 +180,22 @@ public class EpicasAlbumMode : ShipLogMode
         Locator.GetPromptManager().RemoveScreenPrompt(_deletePrompt);
         Locator.GetPromptManager().RemoveScreenPrompt(_deleteSelectPrompt);
         Locator.GetPromptManager().RemoveScreenPrompt(_deleteCancelPrompt);
+
+        if (_currentState != State.Main)
+        {
+            EpicasAlbum.Instance.ModHelper.Console.WriteLine($"Unexpected state {_currentState} on exit!", MessageType.Error);
+        }
+        _currentState = State.Disabled;
+    }
+
+    public override bool AllowModeSwap()
+    {
+        return _currentState == State.Main;
+    }
+
+    public override bool AllowCancelInput()
+    {
+        return _currentState == State.Main;
     }
 
     public override void OnEnterComputer()
@@ -174,17 +207,7 @@ public class EpicasAlbumMode : ShipLogMode
     {
         // No-op
     }
-
-    public override bool AllowModeSwap()
-    {
-        return !_deleteDialogOpen;
-    }
-
-    public override bool AllowCancelInput()
-    {
-        return !_deleteDialogOpen;
-    }
-
+ 
     public override string GetFocusedEntryID()
     {
         return "";
