@@ -26,9 +26,11 @@ public class EpicasAlbumMode : ShipLogMode
     private ScreenPrompt _deletePrompt;
 
     private State _currentState;
+    private Action<string> _selectedSnapshotNameConsumer;
+
     private Image _itemListPhoto;
-    private ScreenPrompt _deleteSelectPrompt;
-    private ScreenPrompt _deleteCancelPrompt;
+    private ScreenPrompt _selectPrompt;
+    private ScreenPrompt _cancelPrompt;
 
     // Same as I did for Journal
     public enum State
@@ -46,8 +48,8 @@ public class EpicasAlbumMode : ShipLogMode
         // TODO: Translation
         _showOnDiskPrompt = new ScreenPrompt(InputLibrary.toolActionPrimary, "Show on Disk");
         _deletePrompt = new ScreenPrompt(InputLibrary.toolActionSecondary, "Delete");
-        _deleteCancelPrompt = new ScreenPrompt(InputLibrary.cancel, "Cancel");
-        _deleteSelectPrompt = new ScreenPrompt(InputLibrary.interact, "Select Option");
+        _cancelPrompt = new ScreenPrompt(InputLibrary.cancel, "Cancel");
+        _selectPrompt = new ScreenPrompt(InputLibrary.interact, "Select");
 
         _layout = AlbumLayout.Create(gameObject, oneShotSource);
         _layout.SetName(Name);
@@ -69,15 +71,7 @@ public class EpicasAlbumMode : ShipLogMode
 
     public override void EnterMode(string entryID = "", List<ShipLogFact> revealQueue = null)
     {
-        UpdateSnaphots();
-        _oneShotSource.PlayOneShot(AudioType.ToolProbeTakePhoto);
-        _layout.Open();
-
-        Locator.GetPromptManager().AddScreenPrompt(_showOnDiskPrompt, _layout.promptList, TextAnchor.MiddleCenter);
-        Locator.GetPromptManager().AddScreenPrompt(_deletePrompt, _layout.promptList, TextAnchor.MiddleCenter);
-        Locator.GetPromptManager().AddScreenPrompt(_deleteCancelPrompt, _upperRightPromptList, TextAnchor.MiddleCenter);
-        Locator.GetPromptManager().AddScreenPrompt(_deleteSelectPrompt, _upperRightPromptList, TextAnchor.MiddleCenter);
-
+        OpenLayout();
         if (_currentState != State.Disabled)
         {
             EpicasAlbum.Instance.ModHelper.Console.WriteLine($"Unexpected state {_currentState} on enter!", MessageType.Error);
@@ -85,16 +79,27 @@ public class EpicasAlbumMode : ShipLogMode
         _currentState = State.Main;
     }
 
+    private void OpenLayout()
+    {
+        UpdateSnaphots();
+        _oneShotSource.PlayOneShot(AudioType.ToolProbeTakePhoto);
+        _layout.Open();
+
+        Locator.GetPromptManager().AddScreenPrompt(_showOnDiskPrompt, _layout.promptList, TextAnchor.MiddleCenter);
+        Locator.GetPromptManager().AddScreenPrompt(_deletePrompt, _layout.promptList, TextAnchor.MiddleCenter);
+        Locator.GetPromptManager().AddScreenPrompt(_cancelPrompt, _upperRightPromptList, TextAnchor.MiddleRight);
+        Locator.GetPromptManager().AddScreenPrompt(_selectPrompt, _upperRightPromptList, TextAnchor.MiddleRight);
+    }
+
     private void UpdateSnaphots()
     {
         if (_lastSnapshotNames == null || !Store.SnapshotNames.SequenceEqual(_lastSnapshotNames))
         {
             _lastSnapshotNames = Store.SnapshotNames.ToList(); // Make sure to copy...
-            // Show new ones on top!
+            // Show new ones on top! Already sorted that way from store
             List<Func<Sprite>> sprites = new();
-            for (var i = _lastSnapshotNames.Count - 1; i >= 0; i--)
+            foreach (string snapshotName in _lastSnapshotNames)
             {
-                string snapshotName = _lastSnapshotNames[i];
                 Func<Sprite> spriteProvider = () => Store.GetSprite(snapshotName);
                 sprites.Add(spriteProvider);
             }
@@ -104,7 +109,7 @@ public class EpicasAlbumMode : ShipLogMode
 
     public override void UpdateMode()
     {
-        if (_currentState == State.Main)
+        if (_currentState is State.Main or State.Choosing)
         {
             _layout.UpdateLayout();
         }
@@ -114,78 +119,144 @@ public class EpicasAlbumMode : ShipLogMode
         }
 
         bool snapshotsAvailable = _lastSnapshotNames.Count > 0;
-        bool snapshotSelectedInAlbum = _currentState == State.Main && snapshotsAvailable;
-        _showOnDiskPrompt.SetVisibility(snapshotSelectedInAlbum);
-        _deletePrompt.SetVisibility(snapshotSelectedInAlbum);
-        _deleteCancelPrompt.SetVisibility(_currentState == State.Deleting);
-        _deleteSelectPrompt.SetVisibility(_currentState == State.Deleting);
+        _showOnDiskPrompt.SetVisibility(snapshotsAvailable && _currentState == State.Main);
+        _deletePrompt.SetVisibility(snapshotsAvailable && _currentState == State.Main);
+        _cancelPrompt.SetVisibility(_currentState is State.Deleting or State.Choosing);
+        _selectPrompt.SetVisibility(_currentState is State.Deleting or State.Choosing);
 
-        if (snapshotSelectedInAlbum) {
-            if (OWInput.IsNewlyPressed(InputLibrary.toolActionPrimary))
-            {
-                Store.ShowOnDisk(GetSelectedSnapshotName());
-            }
-            if (OWInput.IsNewlyPressed(InputLibrary.toolActionSecondary))
-            {
-                _currentState = State.Deleting;
-                ItemList.GetPhoto().sprite = Store.GetSprite(GetSelectedSnapshotName());
-                ItemList.Open();
-                ItemList.SetSelectedIndex(0);
-                _oneShotSource.PlayOneShot(AudioType.ShipLogSelectPlanet);
-            }
-        }
-
-        if (_currentState == State.Deleting)
+        switch (_currentState)
         {
-            bool closeDialog = false;
-            if (OWInput.IsNewlyPressed(InputLibrary.interact))
-            {
-                closeDialog = true;
-                if (ItemList.GetSelectedIndex() == 0)
+            case State.Main:
+                if (!snapshotsAvailable)
                 {
-                    Store.DeleteSnapshot(GetSelectedSnapshotName());
-                    UpdateSnaphots();
-                    if (_layout.selectedIndex >= _lastSnapshotNames.Count && _lastSnapshotNames.Count > 0)
+                    return;
+                }
+                if (OWInput.IsNewlyPressed(InputLibrary.toolActionPrimary))
+                {
+                    Store.ShowOnDisk(GetSelectedSnapshotName());
+                } 
+                else if (OWInput.IsNewlyPressed(InputLibrary.toolActionSecondary))
+                {
+                    _currentState = State.Deleting;
+                    ItemList.GetPhoto().sprite = Store.GetSprite(GetSelectedSnapshotName());
+                    ItemList.Open();
+                    ItemList.SetSelectedIndex(0);
+                    _oneShotSource.PlayOneShot(AudioType.ShipLogSelectPlanet);
+                }
+                break; 
+            case State.Deleting:
+                bool closeDialog = false;
+                if (OWInput.IsNewlyPressed(InputLibrary.interact))
+                {
+                    closeDialog = true;
+                    if (ItemList.GetSelectedIndex() == 0)
                     {
-                        // Move selected in case last one deleted, but don't select -1!
-                        _layout.selectedIndex = _lastSnapshotNames.Count - 1;
+                        Store.DeleteSnapshot(GetSelectedSnapshotName());
+                        UpdateSnaphots();
+                        if (_layout.selectedIndex >= _lastSnapshotNames.Count && _lastSnapshotNames.Count > 0)
+                        {
+                            // Move selected in case last one deleted, but don't select -1!
+                            _layout.selectedIndex = _lastSnapshotNames.Count - 1;
+                        }
                     }
                 }
-            }
-            if (OWInput.IsNewlyPressed(InputLibrary.cancel))
-            {
-                closeDialog = true; // This is the same as selecting "No" (1)
-            }
+                else if (OWInput.IsNewlyPressed(InputLibrary.cancel))
+                {
+                    closeDialog = true; // This is the same as selecting "No" (1)
+                }
 
-            if (closeDialog)
-            {
-                _currentState = State.Main;
-                ItemList.Close();
-                _oneShotSource.PlayOneShot(AudioType.ShipLogDeselectPlanet);
-            }
+                if (closeDialog)
+                {
+                    _currentState = State.Main;
+                    ItemList.Close();
+                    _oneShotSource.PlayOneShot(AudioType.ShipLogDeselectPlanet);
+                }
+                break;
+            case State.Choosing:
+                if (snapshotsAvailable && OWInput.IsNewlyPressed(InputLibrary.interact))
+                {
+                    CloseSnapshotChooserDialog(GetSelectedSnapshotName());
+                }
+                else if (OWInput.IsNewlyPressed(InputLibrary.cancel))
+                {
+                    CloseSnapshotChooserDialog(null);
+                }
+                break;
+            default:
+                EpicasAlbum.Instance.ModHelper.Console.WriteLine($"Unexpected state {_currentState} on update!", MessageType.Error);
+                break;
         }
     }
 
     private string GetSelectedSnapshotName()
     {
-        // Reversed in layout
-        return _lastSnapshotNames[_lastSnapshotNames.Count - 1 - _layout.selectedIndex];
+        return _lastSnapshotNames[_layout.selectedIndex];
     }
 
     public override void ExitMode()
     {
-        _layout.Close();
-
-        Locator.GetPromptManager().RemoveScreenPrompt(_showOnDiskPrompt);
-        Locator.GetPromptManager().RemoveScreenPrompt(_deletePrompt);
-        Locator.GetPromptManager().RemoveScreenPrompt(_deleteSelectPrompt);
-        Locator.GetPromptManager().RemoveScreenPrompt(_deleteCancelPrompt);
-
+        CloseLayout();
         if (_currentState != State.Main)
         {
             EpicasAlbum.Instance.ModHelper.Console.WriteLine($"Unexpected state {_currentState} on exit!", MessageType.Error);
         }
         _currentState = State.Disabled;
+    }
+
+    private void CloseLayout()
+    {
+        _layout.Close();
+
+        Locator.GetPromptManager().RemoveScreenPrompt(_showOnDiskPrompt);
+        Locator.GetPromptManager().RemoveScreenPrompt(_deletePrompt);
+        Locator.GetPromptManager().RemoveScreenPrompt(_selectPrompt);
+        Locator.GetPromptManager().RemoveScreenPrompt(_cancelPrompt);
+    }
+
+    public void OpenSnapshotChooserDialog(string defaultSnapshotName, Action<string> selectedSnapshotNameConsumer)
+    {
+        OpenLayout();
+        if (defaultSnapshotName != null)
+        {
+            int defaultIndex = _lastSnapshotNames.FindIndex(snapshotName => snapshotName.Equals(defaultSnapshotName));
+            if (defaultIndex >= 0)
+            {
+                _layout.selectedIndex = defaultIndex;
+            }
+            else
+            {
+                EpicasAlbum.Instance.ModHelper.Console.WriteLine(
+                    $"Snapshot with name {defaultSnapshotName} not found when opening dialog!", MessageType.Error);
+                // Keep the previous index
+            }
+        }
+
+        _selectedSnapshotNameConsumer = selectedSnapshotNameConsumer;
+        
+        if (_currentState != State.Disabled)
+        {
+            EpicasAlbum.Instance.ModHelper.Console.WriteLine($"Unexpected state {_currentState} on open chooser dialog!", MessageType.Error);
+        }
+        _currentState = State.Choosing;
+    }
+    
+    private void CloseSnapshotChooserDialog(string selectedSnapshotName)
+    {
+        _selectedSnapshotNameConsumer.Invoke(selectedSnapshotName);
+        _selectedSnapshotNameConsumer = null;
+        
+        CloseLayout();
+        if (_currentState != State.Choosing)
+        {
+            EpicasAlbum.Instance.ModHelper.Console.WriteLine($"Unexpected state {_currentState} on close chooser dialog!", MessageType.Error);
+        }
+        _currentState = State.Disabled;
+    }
+
+    public bool IsActiveButNotCurrent()
+    {
+        // The mod is active on choosing dialog mode but it's not the current SL mode!
+        return _currentState == State.Choosing;
     }
 
     public override bool AllowModeSwap()
@@ -195,6 +266,7 @@ public class EpicasAlbumMode : ShipLogMode
 
     public override bool AllowCancelInput()
     {
+        // Chooser is closeable but handled by the mode itself (adding it here wouldn't make a difference tho)
         return _currentState == State.Main;
     }
 

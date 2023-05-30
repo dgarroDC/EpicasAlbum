@@ -28,6 +28,7 @@ public class AlbumStore
             .Where(f => extensions.Contains(f.Extension.ToLower()))
             .OrderBy(f => f.CreationTime)
             .Select(f => f.Name)
+            .Reverse()
             .ToList();
     }
     
@@ -49,7 +50,7 @@ public class AlbumStore
         _loadedTextures.Add(fileName, snapshotTexture);
     }
 
-    public Texture2D GetTexture(string snapshotName)
+    public Texture2D GetTexture(string snapshotName, bool bypassFrameLimit)
     {
         if (_loadedTextures.ContainsKey(snapshotName))
         {
@@ -81,14 +82,14 @@ public class AlbumStore
         return Path.Combine(_folder, fileName);
     }
 
-    public Sprite GetSprite(string snapshotName)
+    public Sprite GetSprite(string snapshotName, bool bypassFrameLimit = false)
     {
         if (_loadedSprites.ContainsKey(snapshotName))
         {
             return _loadedSprites[snapshotName];
         }
 
-        Texture2D texture = GetTexture(snapshotName);
+        Texture2D texture = GetTexture(snapshotName, bypassFrameLimit);
         if (texture == null)
         {
             return null;

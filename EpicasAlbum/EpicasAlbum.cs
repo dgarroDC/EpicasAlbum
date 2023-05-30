@@ -1,5 +1,7 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
+using EpicasAlbum.API;
 using EpicasAlbum.CustomShipLogModes;
 using OWML.ModHelper;
 using UnityEngine;
@@ -14,14 +16,19 @@ public class EpicasAlbum : ModBehaviour
     private bool _setupDone;
     private ScreenPrompt _uploadPrompt;
     private AlbumStore _store;
+    private EpicasAlbumMode _epicasAlbumMode;
 
     private void Start()
     {
         Instance = this;
         ModHelper.HarmonyHelper.AddPostfix<ShipLogController>("LateInitialize", typeof(EpicasAlbum), nameof(SetupPatch));
-        LoadManager.OnCompleteSceneLoad += (scene, loadScene) => _setupDone = false;
+        LoadManager.OnCompleteSceneLoad += (_, _) => _setupDone = false;
     }
-    
+
+    public override object GetApi() {
+        return new EpicasAlbumAPI();
+    }
+ 
     private static void SetupPatch() {
         Instance.Setup();
     }
@@ -45,13 +52,13 @@ public class EpicasAlbum : ModBehaviour
         GameObject shipLogCanvas = GameObject.Find("Ship_Body/Module_Cabin/Systems_Cabin/ShipLogPivot/ShipLog/ShipLogPivot/ShipLogCanvas/");
         GameObject albumGo = new GameObject(nameof(EpicasAlbumMode));
         albumGo.transform.SetParent(shipLogCanvas.transform);
-        EpicasAlbumMode epicasAlbumMode = albumGo.AddComponent<EpicasAlbumMode>();
-        epicasAlbumMode.Store = _store;
+        _epicasAlbumMode = albumGo.AddComponent<EpicasAlbumMode>();
+        _epicasAlbumMode.Store = _store;
         customShipLogModesAPI.ItemListMake(true, false, itemList =>
         {
             itemList.name = "EpicasAlbumList";
-            epicasAlbumMode.ItemList = new ItemListWrapper(customShipLogModesAPI, itemList);
-            customShipLogModesAPI.AddMode(epicasAlbumMode, () => true, () => EpicasAlbumMode.Name);
+            _epicasAlbumMode.ItemList = new ItemListWrapper(customShipLogModesAPI, itemList);
+            customShipLogModesAPI.AddMode(_epicasAlbumMode, () => true, () => EpicasAlbumMode.Name);
         });
     }
 
@@ -59,6 +66,16 @@ public class EpicasAlbum : ModBehaviour
     {
         if (!_setupDone) return;
 
+        UpdateSnapshotUpload();
+ 
+        if (_epicasAlbumMode.IsActiveButNotCurrent())
+        {
+            _epicasAlbumMode.UpdateMode();
+        }
+    }
+
+    private void UpdateSnapshotUpload()
+    {
         bool enabled = false;
         ProbeLauncher activeLauncher = null;
 
@@ -90,5 +107,16 @@ public class EpicasAlbum : ModBehaviour
     private void LateUpdate()
     {
         texturesLoadedThisFrame = 0;
+    }
+
+    public void OpenSnapshotChooserDialog(string defaultSnapshotName, Action<string> selectedSnapshotNameConsumer)
+    {
+        _epicasAlbumMode.OpenSnapshotChooserDialog(defaultSnapshotName, selectedSnapshotNameConsumer);
+    }
+
+    public Sprite GetSnapshotSprite(string snapshotName)
+    {
+        // TODO: Add a way to no bypass it? What null would mean if not found?
+        return _store.GetSprite(snapshotName, true);
     }
 }
