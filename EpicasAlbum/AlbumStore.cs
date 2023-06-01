@@ -46,7 +46,8 @@ public class AlbumStore
         }
         File.WriteAllBytes(Path.Combine(_folder, fileName), data);
 
-        SnapshotNames.Add(fileName);
+        // Because newer should be first! Would this be an issue with a LOT of photos?
+        SnapshotNames.Insert(0, fileName);
         _loadedTextures.Add(fileName, snapshotTexture);
     }
 
