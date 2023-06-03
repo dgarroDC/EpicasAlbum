@@ -4,7 +4,7 @@
   "author": "Damián Garro",
   "name": "Épicas Album",
   "uniqueName": "dgarro.EpicasAlbum",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "owmlVersion": "2.9.0",
   "dependencies": [ "dgarro.CustomShipLogModes" ],
   "pathsToPreserve": [ "snapshots" ]
