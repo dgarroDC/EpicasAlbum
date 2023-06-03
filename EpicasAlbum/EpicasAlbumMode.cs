@@ -122,7 +122,7 @@ public class EpicasAlbumMode : ShipLogMode
         _showOnDiskPrompt.SetVisibility(snapshotsAvailable && _currentState == State.Main);
         _deletePrompt.SetVisibility(snapshotsAvailable && _currentState == State.Main);
         _cancelPrompt.SetVisibility(_currentState is State.Deleting or State.Choosing);
-        _selectPrompt.SetVisibility(_currentState is State.Deleting or State.Choosing);
+        _selectPrompt.SetVisibility(_currentState == State.Deleting || _currentState == State.Choosing && snapshotsAvailable);
 
         switch (_currentState)
         {
