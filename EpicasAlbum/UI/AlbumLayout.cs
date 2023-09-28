@@ -128,6 +128,7 @@ public class AlbumLayout : MonoBehaviour
         promptListRect.anchoredPosition = new Vector2(-515, 65); // Hardcoded...
         promptListRect.sizeDelta = new Vector2(515, 25);
         albumLayout.promptList = promptListGo.GetComponent<ScreenPromptList>();
+        albumLayout.promptList.SetMinElementDimensionsAndFontSize(25, 25, 21);
         HorizontalLayoutGroup promptListLayoutGroup = promptListGo.GetComponent<HorizontalLayoutGroup>();
         promptListLayoutGroup.spacing = 10;
         promptListLayoutGroup.childForceExpandWidth = false;
