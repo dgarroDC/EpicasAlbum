@@ -23,35 +23,8 @@ public class EpicasAlbum : ModBehaviour
         Instance = this;
         ModHelper.HarmonyHelper.AddPostfix<ShipLogController>("LateInitialize", typeof(EpicasAlbum), nameof(SetupPatch));
         LoadManager.OnCompleteSceneLoad += (_, _) => _setupDone = false;
-        GlobalMessenger<ProbeCamera>.AddListener("ProbeSnapshot", OnProbeSnapshot);
     }
 
-    private void OnProbeSnapshot(ProbeCamera camera)
-    {
-        ModHelper.Console.WriteLine($"ON SNAPSHOT={GetGameObjectPath(camera.gameObject)}");
-
-        Transform probeTransform = camera.transform;
-        SurveyorProbe probe = null;
-        while (!probeTransform.TryGetComponent<SurveyorProbe>(out probe))
-        {
-            probeTransform = probeTransform.parent;
-        }
-
-        Sector sector = probe.GetSectorDetector().GetLastEnteredSector();
-        ModHelper.Console.WriteLine($"ON SNAPSHOT={GetGameObjectPath(camera.gameObject)},{GetGameObjectPath(sector.gameObject)},{GetGameObjectPath(sector.GetOWRigidbody().gameObject)}");
-    }
-
-    
-    public static string GetGameObjectPath(GameObject obj)
-    {
-        string path = "/" + obj.name;
-        while (obj.transform.parent != null)
-        {
-            obj = obj.transform.parent.gameObject;
-            path = "/" + obj.name + path;
-        }
-        return path;
-    }
     public override object GetApi() {
         return new EpicasAlbumAPI();
     }
