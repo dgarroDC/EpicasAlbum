@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -12,26 +13,99 @@ public class AlbumStore
 {
     private string _folder;
     public List<string> SnapshotNames;
-    private Dictionary<string, Texture2D> _loadedTextures = new(); // TODO: Remove?
+    private Dictionary<string, Texture2D> _loadedTextures = new(); // TODO: Remove? Why did I suggest this?
     private Dictionary<string, Sprite> _loadedSprites = new();
+    private ConcurrentQueue<string> _toInvalidate = new(); // Important to be concurrent!
+    private bool _folderChanged;
 
-    public AlbumStore(string folder)
+    public AlbumStore(string profileName)
     {
-        _folder = folder;
-        if (!Directory.Exists(folder))
+        _folder = Path.Combine(EpicasAlbum.Instance.ModHelper.Manifest.ModFolderPath, "snapshots", profileName);
+        RefreshSnapshotNames();
+
+        // Should I create watchers for each file type?
+        FileSystemWatcher watcher = new FileSystemWatcher();
+        watcher.Path = _folder;
+        watcher.NotifyFilter = NotifyFilters.CreationTime | NotifyFilters.DirectoryName | NotifyFilters.FileName |
+                               NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.Size; // Not sure
+        watcher.Changed += (_, args) => OnChanged(args);
+        watcher.Created += (_, args) => OnCreated(args);
+        watcher.Deleted += (_, args) => OnDeleted(args);
+        watcher.Renamed += (_, args) => OnRenamed(args);
+        watcher.EnableRaisingEvents = true;
+    }
+    
+    private void FolderChanged(string fileToInvalidate)
+    {
+        if (fileToInvalidate != null)
         {
-            Directory.CreateDirectory(folder);
+            _toInvalidate.Enqueue(fileToInvalidate);
+        }
+        _folderChanged = true;
+    }
+
+    private void OnChanged(FileSystemEventArgs args)
+    {
+        // The image may be changed now
+        FolderChanged(args.FullPath);
+    }
+
+    private void OnCreated(FileSystemEventArgs args)
+    {
+        // Nothing to invalidate
+        FolderChanged(null);
+    }
+
+    private void OnDeleted(FileSystemEventArgs args)
+    {
+        FolderChanged(args.FullPath);
+    }
+    
+    private void OnRenamed(RenamedEventArgs args)
+    {
+        // This isn't raised? Only Deleted -> Created I see...
+        FolderChanged(args.OldFullPath);
+    }
+
+    public bool CheckChanges()
+    {
+        if (_folderChanged)
+        {
+            // Is this thread-safe?
+            while (_toInvalidate.Count > 0)
+            {                
+                // TODO: Name is returning same as FullPath, Mono bug?
+                string fullPath;
+                _toInvalidate.TryDequeue(out fullPath);
+                string snapshotName = Path.GetFileName(fullPath);
+                // TODO: Null on remame dir???
+                _loadedSprites.Remove(snapshotName);
+                _loadedTextures.Remove(snapshotName);
+            }
+            
+            RefreshSnapshotNames();
+            _folderChanged = false; // TODO: Check race condition, missed changes?
+            return true;
         }
 
+        return false;
+    }
+
+    private void RefreshSnapshotNames()
+    {
+        if (!Directory.Exists(_folder))
+        {
+            Directory.CreateDirectory(_folder);
+        }
         string[] extensions = { ".png", ".jpg" };
-        SnapshotNames = new DirectoryInfo(folder).GetFiles()
+        SnapshotNames = new DirectoryInfo(_folder).GetFiles()
             .Where(f => extensions.Contains(f.Extension.ToLower()))
             .OrderBy(f => f.CreationTime)
             .Select(f => f.Name)
             .Reverse()
             .ToList();
     }
-    
+
     public void Save(Texture2D snapshotTexture)
     {
         // Based on ProbeLauncher.SaveSnapshotToFile
@@ -46,13 +120,15 @@ public class AlbumStore
         }
         File.WriteAllBytes(Path.Combine(_folder, fileName), data);
 
-        // Because newer should be first! Would this be an issue with a LOT of photos?
-        SnapshotNames.Insert(0, fileName);
+        // I guess we could wait for the watcher, no need to add it to names yet...
+        // Keep the texture, since this creates a file it won't be invalidated,
+        // although maybe we should be more careful with memory consumption...
         _loadedTextures.Add(fileName, snapshotTexture);
     }
 
     public Texture2D GetTexture(string snapshotName, bool bypassFrameLimit)
     {
+        // TODO: Fix bypassFrameLimit
         if (_loadedTextures.ContainsKey(snapshotName))
         {
             return _loadedTextures[snapshotName];
@@ -80,6 +156,7 @@ public class AlbumStore
 
     private string GetPath(string fileName)
     {
+        // TODO: Here check for "screenshot/"
         return Path.Combine(_folder, fileName);
     }
 
@@ -115,6 +192,7 @@ public class AlbumStore
     public void DeleteSnapshot(string snapshotName)
     {
         File.Delete(GetPath(snapshotName));
+        // Don't wait for the watcher, there could be a delay
         SnapshotNames.Remove(snapshotName);
         _loadedTextures.Remove(snapshotName);
         _loadedSprites.Remove(snapshotName);

@@ -40,7 +40,7 @@ public class EpicasAlbum : ModBehaviour
         Locator.GetPromptManager().AddScreenPrompt(_uploadPrompt, PromptPosition.UpperRight);
         // Same Gamepass profile name as New Horizons
         string profileName = StandaloneProfileManager.SharedInstance?.currentProfile?.profileName ?? "XboxGamepassDefaultProfile";
-        _store = new AlbumStore(Path.Combine(ModHelper.Manifest.ModFolderPath, "snapshots", profileName));
+        _store = new AlbumStore(profileName);
         CreateMode();
         _setupDone = true;
     }
@@ -71,6 +71,11 @@ public class EpicasAlbum : ModBehaviour
         if (_epicasAlbumMode.IsActiveButNotCurrent())
         {
             _epicasAlbumMode.UpdateMode();
+        }
+
+        if (_store.CheckChanges())
+        {
+            _epicasAlbumMode.StoreChanged = true;
         }
     }
 

@@ -15,6 +15,7 @@ public class EpicasAlbumMode : ShipLogMode
 
     public AlbumStore Store;
     public ItemListWrapper ItemList;
+    public bool StoreChanged;
 
     private AlbumLayout _layout;
     private List<string> _lastSnapshotNames;
@@ -93,8 +94,13 @@ public class EpicasAlbumMode : ShipLogMode
 
     private void UpdateSnaphots()
     {
-        if (_lastSnapshotNames == null || !Store.SnapshotNames.SequenceEqual(_lastSnapshotNames))
+        if (_lastSnapshotNames == null || StoreChanged)
         {
+            // The index change is important if it was empty (I could check count > 0 but just in case...)
+            string prevSelectedSnapshotName = 
+                _lastSnapshotNames != null && _layout.selectedIndex < _lastSnapshotNames.Count? 
+                    GetSelectedSnapshotName() : null;
+            
             _lastSnapshotNames = Store.SnapshotNames.ToList(); // Make sure to copy...
             // Show new ones on top! Already sorted that way from store
             List<Func<Sprite>> sprites = new();
@@ -104,6 +110,20 @@ public class EpicasAlbumMode : ShipLogMode
                 sprites.Add(spriteProvider);
             }
             _layout.sprites = sprites;
+            
+            int prevSelectedIndex = _lastSnapshotNames.FindIndex(snapshotName => snapshotName.Equals(prevSelectedSnapshotName));
+            if (prevSelectedIndex >= 0)
+            {
+                // Try to keep the same snapshot selected (at least by name, replacing file would select the new)
+                _layout.selectedIndex = prevSelectedIndex;
+            }
+            else if (_layout.selectedIndex >= _lastSnapshotNames.Count)
+            {
+                // Move selected in case last one deleted, but don't select -1! (for some reason)
+                _layout.selectedIndex = Mathf.Max(0, _lastSnapshotNames.Count - 1);
+            }
+
+            StoreChanged = false;
         }
     }
 
@@ -111,6 +131,9 @@ public class EpicasAlbumMode : ShipLogMode
     {
         if (_currentState is State.Main or State.Choosing)
         {
+            // Don't update whie deleting, could make it delete other!
+            // TODO: Make it remember selected name! (and maybe autoclose?)
+            UpdateSnaphots();
             _layout.UpdateLayout();
         }
         else
@@ -152,12 +175,7 @@ public class EpicasAlbumMode : ShipLogMode
                     if (ItemList.GetSelectedIndex() == 0)
                     {
                         Store.DeleteSnapshot(GetSelectedSnapshotName());
-                        UpdateSnaphots();
-                        if (_layout.selectedIndex >= _lastSnapshotNames.Count && _lastSnapshotNames.Count > 0)
-                        {
-                            // Move selected in case last one deleted, but don't select -1!
-                            _layout.selectedIndex = _lastSnapshotNames.Count - 1;
-                        }
+                        StoreChanged = true; // Because it changed without waiting watcher
                     }
                 }
                 else if (OWInput.IsNewlyPressed(InputLibrary.cancel))
