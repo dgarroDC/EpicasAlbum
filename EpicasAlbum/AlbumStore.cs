@@ -15,8 +15,7 @@ public class AlbumStore
     public List<string> SnapshotNames;
     private Dictionary<string, Texture2D> _loadedTextures = new(); // TODO: Remove? Why did I suggest this?
     private Dictionary<string, Sprite> _loadedSprites = new();
-    private ConcurrentQueue<string> _toInvalidate = new(); // Important to be concurrent!
-    private bool _folderChanged;
+    private ConcurrentQueue<FileSystemEventArgs> _fsEvents = new(); // Important to be concurrent!
 
     public AlbumStore(string profileName)
     {
@@ -28,71 +27,41 @@ public class AlbumStore
         watcher.Path = _folder;
         watcher.NotifyFilter = NotifyFilters.CreationTime | NotifyFilters.DirectoryName | NotifyFilters.FileName |
                                NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.Size; // Not sure
-        watcher.Changed += (_, args) => OnChanged(args);
-        watcher.Created += (_, args) => OnCreated(args);
-        watcher.Deleted += (_, args) => OnDeleted(args);
-        watcher.Renamed += (_, args) => OnRenamed(args);
+        watcher.Changed += (_, args) => _fsEvents.Enqueue(args);
+        watcher.Created += (_, args) => _fsEvents.Enqueue(args);
+        watcher.Deleted += (_, args) => _fsEvents.Enqueue(args);
+        watcher.Renamed += (_, args) => _fsEvents.Enqueue(args); // This isn't raised? Only Deleted -> Created I see...
         watcher.EnableRaisingEvents = true;
-    }
-    
-    private void FolderChanged(string fileToInvalidate)
-    {
-        if (fileToInvalidate != null)
-        {
-            _toInvalidate.Enqueue(fileToInvalidate);
-        }
-        _folderChanged = true;
-    }
-
-    private void OnChanged(FileSystemEventArgs args)
-    {
-        // The image may be changed now
-        FolderChanged(args.FullPath);
-    }
-
-    private void OnCreated(FileSystemEventArgs args)
-    {
-        // Nothing to invalidate
-        FolderChanged(null);
-    }
-
-    private void OnDeleted(FileSystemEventArgs args)
-    {
-        FolderChanged(args.FullPath);
-    }
-    
-    private void OnRenamed(RenamedEventArgs args)
-    {
-        // This isn't raised? Only Deleted -> Created I see...
-        FolderChanged(args.OldFullPath);
     }
 
     public bool CheckChanges()
     {
-        if (_folderChanged)
-        {
-            // Is this thread-safe?
-            while (_toInvalidate.Count > 0)
-            {                
-                // TODO: Name is returning same as FullPath, Mono bug?
-                string fullPath;
-                _toInvalidate.TryDequeue(out fullPath);
-                string snapshotName = Path.GetFileName(fullPath);
-                // TODO: Null on remame dir???
+        if (_fsEvents.IsEmpty) return false;
+
+        while (!_fsEvents.IsEmpty)
+        {                
+            
+            FileSystemEventArgs args;
+            _fsEvents.TryDequeue(out args);
+            if (args is { ChangeType: WatcherChangeTypes.Changed })
+            {
+                // The image could be different now and we don't want to display the old one
+                // TODO: Name is returning same as FullPath, Mono bug? What if FullPath is broken too?
+                string snapshotName = Path.GetFileName(args.FullPath);
                 _loadedSprites.Remove(snapshotName);
                 _loadedTextures.Remove(snapshotName);
             }
-            
-            RefreshSnapshotNames();
-            _folderChanged = false; // TODO: Check race condition, missed changes?
-            return true;
         }
-
-        return false;
+        
+        // This invalidates for deleted or renamed ones
+        RefreshSnapshotNames();
+        return true;
     }
 
     private void RefreshSnapshotNames()
     {
+        var stopwatch = new Stopwatch();
+        stopwatch.Start();
         if (!Directory.Exists(_folder))
         {
             Directory.CreateDirectory(_folder);
@@ -104,6 +73,17 @@ public class AlbumStore
             .Select(f => f.Name)
             .Reverse()
             .ToList();
+        stopwatch.Stop();
+        // TODO: THIS IS SLOW
+        EpicasAlbum.Instance.ModHelper.Console.WriteLine("GETFILES="+stopwatch.ElapsedMilliseconds);
+        
+        // Invalidate removed snapshots
+        List<string> toRemove = _loadedTextures.Keys.Except(SnapshotNames).ToList();
+        foreach (string snapshotName in toRemove)
+        {
+            _loadedSprites.Remove(snapshotName);
+            _loadedTextures.Remove(snapshotName);
+        }
     }
 
     public void Save(Texture2D snapshotTexture)
