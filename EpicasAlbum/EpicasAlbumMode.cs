@@ -15,7 +15,6 @@ public class EpicasAlbumMode : ShipLogMode
 
     public AlbumStore Store;
     public ItemListWrapper ItemList;
-    public bool StoreChanged;
 
     private AlbumLayout _layout;
     private List<string> _lastSnapshotNames;
@@ -94,14 +93,14 @@ public class EpicasAlbumMode : ShipLogMode
 
     private void UpdateSnaphots()
     {
-        if (_lastSnapshotNames == null || StoreChanged)
+        if (_lastSnapshotNames == null || Store.IsChanged())
         {
             // The index change is important if it was empty (I could check count > 0 but just in case...)
             string prevSelectedSnapshotName = 
                 _lastSnapshotNames != null && _layout.selectedIndex < _lastSnapshotNames.Count? 
                     GetSelectedSnapshotName() : null;
-            
-            _lastSnapshotNames = Store.SnapshotNames.ToList(); // Make sure to copy...
+
+            _lastSnapshotNames = Store.GetSnapshotNames();
             // Show new ones on top! Already sorted that way from store
             List<Func<Sprite>> sprites = new();
             foreach (string snapshotName in _lastSnapshotNames)
@@ -122,8 +121,6 @@ public class EpicasAlbumMode : ShipLogMode
                 // Move selected in case last one deleted, but don't select -1! (for some reason)
                 _layout.selectedIndex = Mathf.Max(0, _lastSnapshotNames.Count - 1);
             }
-
-            StoreChanged = false;
         }
     }
 
@@ -175,7 +172,6 @@ public class EpicasAlbumMode : ShipLogMode
                     if (ItemList.GetSelectedIndex() == 0)
                     {
                         Store.DeleteSnapshot(GetSelectedSnapshotName());
-                        StoreChanged = true; // Because it changed without waiting watcher
                     }
                 }
                 else if (OWInput.IsNewlyPressed(InputLibrary.cancel))
@@ -301,5 +297,11 @@ public class EpicasAlbumMode : ShipLogMode
     public override string GetFocusedEntryID()
     {
         return "";
+    }
+
+    public void OnDestroy()
+    {
+        // Is this the best place to do this? What if the mode wasn't created yet?
+        Store.StopPolling();
     }
 }

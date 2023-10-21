@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using OWML.Common;
 using UnityEngine;
 
@@ -11,79 +12,72 @@ namespace EpicasAlbum;
 
 public class AlbumStore
 {
+    public bool Changed;
+
     private string _folder;
-    public List<string> SnapshotNames;
     private Dictionary<string, Texture2D> _loadedTextures = new(); // TODO: Remove? Why did I suggest this?
     private Dictionary<string, Sprite> _loadedSprites = new();
-    private ConcurrentQueue<FileSystemEventArgs> _fsEvents = new(); // Important to be concurrent!
+    private CancellationTokenSource _cts;
+    private Dictionary<string, AlbumStoreFileInfo> _fileInfos = new();
 
     public AlbumStore(string profileName)
     {
         _folder = Path.Combine(EpicasAlbum.Instance.ModHelper.Manifest.ModFolderPath, "snapshots", profileName);
-        RefreshSnapshotNames();
-
-        // Should I create watchers for each file type?
-        FileSystemWatcher watcher = new FileSystemWatcher();
-        watcher.Path = _folder;
-        watcher.NotifyFilter = NotifyFilters.CreationTime | NotifyFilters.DirectoryName | NotifyFilters.FileName |
-                               NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.Size; // Not sure
-        watcher.Changed += (_, args) => _fsEvents.Enqueue(args);
-        watcher.Created += (_, args) => _fsEvents.Enqueue(args);
-        watcher.Deleted += (_, args) => _fsEvents.Enqueue(args);
-        watcher.Renamed += (_, args) => _fsEvents.Enqueue(args); // This isn't raised? Only Deleted -> Created I see...
-        watcher.EnableRaisingEvents = true;
-    }
-
-    public bool CheckChanges()
-    {
-        if (_fsEvents.IsEmpty) return false;
-
-        while (!_fsEvents.IsEmpty)
-        {                
-            
-            FileSystemEventArgs args;
-            _fsEvents.TryDequeue(out args);
-            if (args is { ChangeType: WatcherChangeTypes.Changed })
-            {
-                // The image could be different now and we don't want to display the old one
-                // TODO: Name is returning same as FullPath, Mono bug? What if FullPath is broken too?
-                string snapshotName = Path.GetFileName(args.FullPath);
-                _loadedSprites.Remove(snapshotName);
-                _loadedTextures.Remove(snapshotName);
-            }
-        }
-        
-        // This invalidates for deleted or renamed ones
-        RefreshSnapshotNames();
-        return true;
-    }
-
-    private void RefreshSnapshotNames()
-    {
-        var stopwatch = new Stopwatch();
-        stopwatch.Start();
         if (!Directory.Exists(_folder))
         {
             Directory.CreateDirectory(_folder);
         }
+        // We don't support the directory to be deleted while the game is running, it may be unable to save files?
+        StartPolling(); // Should this only run while the mode is open?
+    }
+
+    public void StartPolling()
+    {
+        _cts = new CancellationTokenSource();
+        CancellationToken token = _cts.Token;
+        Task.Run(async () =>
+        {
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    CheckSnapshotFiles();
+                }
+                catch (Exception e)
+                {
+                    EpicasAlbum.Instance.ModHelper.Console.WriteLine($"Error checking snapshot files: {e.Message} {e.StackTrace}", MessageType.Error);
+                }
+                await Task.Delay(500, token);
+            }
+        }, token);
+    }
+
+    private void CheckSnapshotFiles()
+    {
+        var stopwatch = new Stopwatch();
+        stopwatch.Start();
         string[] extensions = { ".png", ".jpg" };
-        SnapshotNames = new DirectoryInfo(_folder).GetFiles()
+        Dictionary<string, AlbumStoreFileInfo> newFileInfos = new DirectoryInfo(_folder).GetFiles()
             .Where(f => extensions.Contains(f.Extension.ToLower()))
-            .OrderBy(f => f.CreationTime)
-            .Select(f => f.Name)
-            .Reverse()
-            .ToList();
+            // TODO: CHECK LENGHT ERRORS
+            .ToDictionary(f => f.Name, f => new AlbumStoreFileInfo(f.CreationTimeUtc, f.LastWriteTimeUtc, f.Length));
         stopwatch.Stop();
-        // TODO: THIS IS SLOW
         EpicasAlbum.Instance.ModHelper.Console.WriteLine("GETFILES="+stopwatch.ElapsedMilliseconds);
         
-        // Invalidate removed snapshots
-        List<string> toRemove = _loadedTextures.Keys.Except(SnapshotNames).ToList();
-        foreach (string snapshotName in toRemove)
+        // Invalidate removed or changed snapshots
+        foreach (var (snapshotName, fileInfo) in _fileInfos)
         {
-            _loadedSprites.Remove(snapshotName);
-            _loadedTextures.Remove(snapshotName);
+            AlbumStoreFileInfo newFileInfo;
+            if (newFileInfos.TryGetValue(snapshotName, out newFileInfo) && !fileInfo.Equals(newFileInfo))
+            {
+                _loadedSprites.Remove(snapshotName);
+                _loadedTextures.Remove(snapshotName);
+            }
         }
+
+        bool changed = !newFileInfos.Equals(_fileInfos);
+        _fileInfos = newFileInfos;
+        Changed = Changed || changed;
     }
 
     public void Save(Texture2D snapshotTexture)
@@ -100,7 +94,7 @@ public class AlbumStore
         }
         File.WriteAllBytes(Path.Combine(_folder, fileName), data);
 
-        // I guess we could wait for the watcher, no need to add it to names yet...
+        // I guess we could wait for the polling, no need to add it to names yet...
         // Keep the texture, since this creates a file it won't be invalidated,
         // although maybe we should be more careful with memory consumption...
         _loadedTextures.Add(fileName, snapshotTexture);
@@ -172,9 +166,36 @@ public class AlbumStore
     public void DeleteSnapshot(string snapshotName)
     {
         File.Delete(GetPath(snapshotName));
-        // Don't wait for the watcher, there could be a delay
-        SnapshotNames.Remove(snapshotName);
+        // Don't wait for the polling, there could be a delay
+        Changed = true;
+        // TODO: Race condition?
+        _fileInfos.Remove(snapshotName);
         _loadedTextures.Remove(snapshotName);
         _loadedSprites.Remove(snapshotName);
+    }
+
+    public bool IsChanged()
+    {
+        // TODO: Last change?
+        if (Changed)
+        {
+            Changed = false; // TODO: Race condition...
+            return true;
+        }
+
+        return false;
+    }
+
+    public void StopPolling()
+    {
+        _cts.Cancel();
+    }
+
+    public List<String> GetSnapshotNames()
+    {
+        return _fileInfos
+            .OrderByDescending(f => f.Value.LastWriteTime)
+            .Select(f => f.Key)
+            .ToList();
     }
 }

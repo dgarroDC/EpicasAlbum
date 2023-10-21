@@ -72,11 +72,6 @@ public class EpicasAlbum : ModBehaviour
         {
             _epicasAlbumMode.UpdateMode();
         }
-
-        if (_store.CheckChanges())
-        {
-            _epicasAlbumMode.StoreChanged = true;
-        }
     }
 
     private void UpdateSnapshotUpload()
