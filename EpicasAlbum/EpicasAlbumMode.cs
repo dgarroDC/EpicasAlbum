@@ -93,7 +93,7 @@ public class EpicasAlbumMode : ShipLogMode
 
     private void UpdateSnaphots()
     {
-        if (_lastSnapshotNames == null || Store.IsChanged())
+        if (_lastSnapshotNames == null || !Store.GetSnapshotNames().SequenceEqual(_lastSnapshotNames))
         {
             // The index change is important if it was empty (I could check count > 0 but just in case...)
             string prevSelectedSnapshotName = 

@@ -12,13 +12,12 @@ namespace EpicasAlbum;
 
 public class AlbumStore
 {
-    public bool Changed;
-
     private string _folder;
     private Dictionary<string, Texture2D> _loadedTextures = new(); // TODO: Remove? Why did I suggest this?
     private Dictionary<string, Sprite> _loadedSprites = new();
     private CancellationTokenSource _cts;
     private Dictionary<string, AlbumStoreFileInfo> _fileInfos = new();
+    private List<string> _removedFiles = new();
 
     public AlbumStore(string profileName)
     {
@@ -45,7 +44,7 @@ public class AlbumStore
                 }
                 catch (Exception e)
                 {
-                    EpicasAlbum.Instance.ModHelper.Console.WriteLine($"Error checking snapshot files: {e.Message} {e.StackTrace}", MessageType.Error);
+                    EpicasAlbum.Instance.ModHelper.Console.WriteLine($"Error checking snapshot files: {e}", MessageType.Error);
                 }
                 await Task.Delay(500, token);
             }
@@ -59,8 +58,9 @@ public class AlbumStore
         string[] extensions = { ".png", ".jpg" };
         Dictionary<string, AlbumStoreFileInfo> newFileInfos = new DirectoryInfo(_folder).GetFiles()
             .Where(f => extensions.Contains(f.Extension.ToLower()))
-            // TODO: CHECK LENGHT ERRORS
-            .ToDictionary(f => f.Name, f => new AlbumStoreFileInfo(f.CreationTimeUtc, f.LastWriteTimeUtc, f.Length));
+            .Select(AlbumStoreFileInfo.ForFile)
+            .Where(f => f != null) // File could be deleted while doing this
+            .ToDictionary(f => f.Name, f => f);
         stopwatch.Stop();
         EpicasAlbum.Instance.ModHelper.Console.WriteLine("GETFILES="+stopwatch.ElapsedMilliseconds);
         
@@ -75,9 +75,7 @@ public class AlbumStore
             }
         }
 
-        bool changed = !newFileInfos.Equals(_fileInfos);
         _fileInfos = newFileInfos;
-        Changed = Changed || changed;
     }
 
     public void Save(Texture2D snapshotTexture)
@@ -102,6 +100,7 @@ public class AlbumStore
 
     public Texture2D GetTexture(string snapshotName, bool bypassFrameLimit)
     {
+        // TODO: Add option for async?
         // TODO: Fix bypassFrameLimit
         if (_loadedTextures.ContainsKey(snapshotName))
         {
@@ -116,6 +115,7 @@ public class AlbumStore
         if (!File.Exists(path))
         {
             EpicasAlbum.Instance.ModHelper.Console.WriteLine($"File {path} not found, manually deleted?", MessageType.Error);
+            // TODO: Maybe add here to the excludes too?
             return null;
         }
 
@@ -166,24 +166,8 @@ public class AlbumStore
     public void DeleteSnapshot(string snapshotName)
     {
         File.Delete(GetPath(snapshotName));
-        // Don't wait for the polling, there could be a delay
-        Changed = true;
-        // TODO: Race condition?
-        _fileInfos.Remove(snapshotName);
-        _loadedTextures.Remove(snapshotName);
-        _loadedSprites.Remove(snapshotName);
-    }
-
-    public bool IsChanged()
-    {
-        // TODO: Last change?
-        if (Changed)
-        {
-            Changed = false; // TODO: Race condition...
-            return true;
-        }
-
-        return false;
+        // Don't wait for the polling (except for invalidation), there could be a delay, make it exclude
+        _removedFiles.Add(snapshotName);
     }
 
     public void StopPolling()
@@ -193,9 +177,19 @@ public class AlbumStore
 
     public List<String> GetSnapshotNames()
     {
-        return _fileInfos
+        List<string> snapshotNames = _fileInfos
             .OrderByDescending(f => f.Value.LastWriteTime)
             .Select(f => f.Key)
             .ToList();
+        foreach (string removedFile in _removedFiles.ToList()) // Maybe not efficient, but we can remove
+        {
+            if (!snapshotNames.Remove(removedFile))
+            {
+                // Already not present in infos, we can't stop excluding
+                _removedFiles.Remove(removedFile);
+            }
+            // TODO: Race condition if file with same name was added shortly after?!
+        }
+        return snapshotNames;
     }
 }
