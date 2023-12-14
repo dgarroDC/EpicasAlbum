@@ -167,9 +167,7 @@ public class EpicasAlbumMode : ShipLogMode
 
                 if (closeDialog)
                 {
-                    _currentState = State.Main;
-                    ItemList.Close();
-                    _oneShotSource.PlayOneShot(AudioType.ShipLogDeselectPlanet);
+                    CloseDeletionDialog();
                 }
                 break;
             case State.Choosing:
@@ -195,6 +193,11 @@ public class EpicasAlbumMode : ShipLogMode
 
     public override void ExitMode()
     {
+        // In case of electrical failure (Choosing is not possible here because it wouldn't be the active mode)
+        if (_currentState == State.Deleting)
+        {
+            CloseDeletionDialog();
+        }
         CloseLayout();
         if (_currentState != State.Main)
         {
@@ -252,6 +255,13 @@ public class EpicasAlbumMode : ShipLogMode
         }
         _currentState = State.Disabled;
     }
+    
+    private void CloseDeletionDialog()
+    {
+        _currentState = State.Main;
+        ItemList.Close();
+        _oneShotSource.PlayOneShot(AudioType.ShipLogDeselectPlanet);
+    }
 
     public bool IsActiveButNotCurrent()
     {
@@ -277,7 +287,11 @@ public class EpicasAlbumMode : ShipLogMode
 
     public override void OnExitComputer()
     {
-        // No-op
+        // For unexpected shutdown (electrical failure)
+        if (_currentState == State.Choosing)
+        {
+            CloseSnapshotChooserDialog(null);
+        }
     }
  
     public override string GetFocusedEntryID()
