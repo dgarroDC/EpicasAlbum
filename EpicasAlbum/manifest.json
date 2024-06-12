@@ -5,7 +5,7 @@
   "name": "Épicas Album",
   "uniqueName": "dgarro.EpicasAlbum",
   "version": "1.1.2",
-  "owmlVersion": "2.9.0",
+  "owmlVersion": "2.13.0",
   "dependencies": [ "dgarro.CustomShipLogModes" ],
   "pathsToPreserve": [ "snapshots" ]
 }
