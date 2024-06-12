@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using EpicasAlbum.CustomShipLogModes;
+using EpicasAlbum.CustomModesAPIs;
 using EpicasAlbum.UI;
 using OWML.Common;
 using UnityEngine;
@@ -12,25 +12,27 @@ namespace EpicasAlbum;
 public class EpicasAlbumMode : ShipLogMode
 {
     public const string Name = "Épicas Album";
+    private const string EmptyText = "Empty album, upload your scout snapshots to view them here!";
 
     public AlbumStore Store;
     public ItemListWrapper ItemList;
 
     private AlbumLayout _layout;
     private List<string> _lastSnapshotNames;
+    private string _selectedSnapshotName;
+    private Image _itemListPhoto;
+    private List<Tuple<string,bool,bool,bool>> _confirmationItems;
 
     private OWAudioSource _oneShotSource;
     private ScreenPromptList _upperRightPromptList;
 
     private ScreenPrompt _showOnDiskPrompt;
     private ScreenPrompt _deletePrompt;
+    private ScreenPrompt _selectPrompt;
+    private ScreenPrompt _cancelPrompt;
 
     private State _currentState;
     private Action<string> _selectedSnapshotNameConsumer;
-
-    private Image _itemListPhoto;
-    private ScreenPrompt _selectPrompt;
-    private ScreenPrompt _cancelPrompt;
 
     // Same as I did for Journal
     public enum State
@@ -51,20 +53,29 @@ public class EpicasAlbumMode : ShipLogMode
         _cancelPrompt = new ScreenPrompt(InputLibrary.cancel, "Cancel");
         _selectPrompt = new ScreenPrompt(InputLibrary.interact, "Select");
 
-        _layout = AlbumLayout.Create(gameObject, oneShotSource);
-        _layout.SetName(Name);
-        // TODO: Translation
-        _layout.SetEmptyMessage("Empty album, upload your scout snapshots to view them here!");
-        
-        ItemList.SetName("Delete Snapshot?");
         _itemListPhoto = ItemList.GetPhoto();
-        _itemListPhoto.gameObject.SetActive(true);
-        _itemListPhoto.preserveAspect = true; 
-        List<Tuple<string,bool,bool,bool>> items = new();
+        _itemListPhoto.preserveAspect = true;
+
+        if (ItemList is ShipLogItemListWrapper)
+        {
+            _layout = AlbumLayout.Create(gameObject, oneShotSource);
+            _layout.SetName(Name);
+            // TODO: Translation
+            _layout.SetEmptyMessage(EmptyText);
+ 
+            _itemListPhoto.gameObject.SetActive(true);
+        }
+        else
+        {
+            // We know it's cleared because Suit Log's, just open or close when needed since it's not automatic like the layout's msg
+            ItemList.DescriptionFieldGetNextItem().DisplayText(EmptyText);
+            (!) THIS IS SHOWN TWICE?
+        } 
+
+        _confirmationItems = new();
         // TODO: Translation
-        items.Add(new Tuple<string, bool, bool, bool>("Yes", false, false, false));
-        items.Add(new Tuple<string, bool, bool, bool>("No", false, false, false));
-        ItemList.SetItems(items);
+        _confirmationItems.Add(new Tuple<string, bool, bool, bool>("Yes", false, false, false));
+        _confirmationItems.Add(new Tuple<string, bool, bool, bool>("No", false, false, false));
 
         _currentState = State.Disabled;
     }
@@ -81,35 +92,74 @@ public class EpicasAlbumMode : ShipLogMode
 
     private void OpenLayout()
     {
-        UpdateSnaphots();
+        UpdateSnapshots();
         _oneShotSource.PlayOneShot(AudioType.ToolProbeTakePhoto);
-        _layout.Open();
+        if (ItemList is ShipLogItemListWrapper)
+        {
+            _layout.Open();
+        }
+        else
+        {
+            ItemList.Open();
+        }
 
-        Locator.GetPromptManager().AddScreenPrompt(_showOnDiskPrompt, _layout.promptList, TextAnchor.MiddleCenter);
-        Locator.GetPromptManager().AddScreenPrompt(_deletePrompt, _layout.promptList, TextAnchor.MiddleCenter);
+        if (ItemList is ShipLogItemListWrapper)
+        {
+            Locator.GetPromptManager().AddScreenPrompt(_showOnDiskPrompt, _layout.promptList, TextAnchor.MiddleCenter);
+            Locator.GetPromptManager().AddScreenPrompt(_deletePrompt, _layout.promptList, TextAnchor.MiddleCenter);
+        }
+        else
+        {
+            Locator.GetPromptManager().AddScreenPrompt(_showOnDiskPrompt, _upperRightPromptList, TextAnchor.MiddleRight);
+            Locator.GetPromptManager().AddScreenPrompt(_deletePrompt, _upperRightPromptList, TextAnchor.MiddleRight);   
+        }
         Locator.GetPromptManager().AddScreenPrompt(_cancelPrompt, _upperRightPromptList, TextAnchor.MiddleRight);
         Locator.GetPromptManager().AddScreenPrompt(_selectPrompt, _upperRightPromptList, TextAnchor.MiddleRight);
     }
 
-    private void UpdateSnaphots()
+    private void UpdateSnapshots()
     {
         if (_lastSnapshotNames == null || !Store.SnapshotNames.SequenceEqual(_lastSnapshotNames))
         {
             _lastSnapshotNames = Store.SnapshotNames.ToList(); // Make sure to copy...
             // Show new ones on top! Already sorted that way from store
-            List<Func<Sprite>> sprites = new();
-            foreach (string snapshotName in _lastSnapshotNames)
+            if (ItemList is ShipLogItemListWrapper)
             {
-                Func<Sprite> spriteProvider = () => Store.GetSprite(snapshotName);
-                sprites.Add(spriteProvider);
+                List<Func<Sprite>> sprites = new();
+                foreach (string snapshotName in _lastSnapshotNames)
+                {
+                    Func<Sprite> spriteProvider = () => Store.GetSprite(snapshotName);
+                    sprites.Add(spriteProvider);
+                }
+                _layout.sprites = sprites;
             }
-            _layout.sprites = sprites;
+            else
+            {
+                List<Tuple<string, bool, bool, bool>> items = new();
+                foreach (string snapshotName in _lastSnapshotNames)
+                {
+                    items.Add(new Tuple<string, bool, bool, bool>(snapshotName, false, false, false));
+                }
+                (!) CALL THIS IF UNCHANGED!
+                ItemList.SetItems(items);
+                ItemList.SetName(Name);
+                if (items.Count == 0)
+                {
+                    ((SuitLogItemListWrapper)ItemList).DescriptionFieldOpen();
+                    _itemListPhoto.gameObject.SetActive(false);
+                }
+                else
+                {
+                    ((SuitLogItemListWrapper)ItemList).DescriptionFieldClose();
+                    _itemListPhoto.gameObject.SetActive(true);
+                }
+            }
         }
     }
 
     public override void UpdateMode()
     {
-        if (_currentState is State.Main or State.Choosing)
+        if (_currentState is State.Main or State.Choosing && ItemList is ShipLogItemListWrapper)
         {
             _layout.UpdateLayout();
         }
@@ -124,6 +174,15 @@ public class EpicasAlbumMode : ShipLogMode
         _cancelPrompt.SetVisibility(_currentState is State.Deleting or State.Choosing);
         _selectPrompt.SetVisibility(_currentState == State.Deleting || _currentState == State.Choosing && snapshotsAvailable);
 
+        if (_currentState is State.Main or State.Choosing)
+        { 
+            _selectedSnapshotName = snapshotsAvailable ? _lastSnapshotNames[GetSelectedIndex()] : null;
+            if (snapshotsAvailable)
+            {
+                _itemListPhoto.sprite = Store.GetSprite(_selectedSnapshotName);
+            }
+        }
+        
         switch (_currentState)
         {
             case State.Main:
@@ -133,13 +192,18 @@ public class EpicasAlbumMode : ShipLogMode
                 }
                 if (OWInput.IsNewlyPressed(InputLibrary.toolActionPrimary))
                 {
-                    Store.ShowOnDisk(GetSelectedSnapshotName());
+                    Store.ShowOnDisk(_selectedSnapshotName);
                 } 
                 else if (OWInput.IsNewlyPressed(InputLibrary.toolActionSecondary))
                 {
                     _currentState = State.Deleting;
-                    ItemList.GetPhoto().sprite = Store.GetSprite(GetSelectedSnapshotName());
-                    ItemList.Open();
+                    if (ItemList is ShipLogItemListWrapper)
+                    {
+                        ItemList.Open();
+                        // No need to show photo, already done every frame...
+                    }
+                    ItemList.SetItems(_confirmationItems);
+                    ItemList.SetName("Delete Snapshot?");
                     ItemList.SetSelectedIndex(0);
                     _oneShotSource.PlayOneShot(AudioType.ShipLogSelectPlanet);
                 }
@@ -151,13 +215,15 @@ public class EpicasAlbumMode : ShipLogMode
                     closeDialog = true;
                     if (ItemList.GetSelectedIndex() == 0)
                     {
-                        Store.DeleteSnapshot(GetSelectedSnapshotName());
-                        UpdateSnaphots();
-                        if (_layout.selectedIndex >= _lastSnapshotNames.Count && _lastSnapshotNames.Count > 0)
+                        Store.DeleteSnapshot(_selectedSnapshotName); // The only reason with have this field is for this + Suit Log case (shared item list)...
+                        UpdateSnapshots();
+                        (!) INDEX WRONG, JUST REMEMBER PREV INDEX?????
+                        if (GetSelectedIndex() >= _lastSnapshotNames.Count && _lastSnapshotNames.Count > 0)
                         {
                             // Move selected in case last one deleted, but don't select -1!
-                            _layout.selectedIndex = _lastSnapshotNames.Count - 1;
+                            SetSelectedIndex(_lastSnapshotNames.Count - 1);
                         }
+                        (!) TODO STILL NEED TO SET IN SUIT LOG ALWAYS
                     }
                 }
                 else if (OWInput.IsNewlyPressed(InputLibrary.cancel))
@@ -173,7 +239,7 @@ public class EpicasAlbumMode : ShipLogMode
             case State.Choosing:
                 if (snapshotsAvailable && OWInput.IsNewlyPressed(InputLibrary.interact))
                 {
-                    CloseSnapshotChooserDialog(GetSelectedSnapshotName());
+                    CloseSnapshotChooserDialog(_selectedSnapshotName);
                 }
                 else if (OWInput.IsNewlyPressed(InputLibrary.cancel))
                 {
@@ -186,9 +252,22 @@ public class EpicasAlbumMode : ShipLogMode
         }
     }
 
-    private string GetSelectedSnapshotName()
+    private void SetSelectedIndex(int index)
     {
-        return _lastSnapshotNames[_layout.selectedIndex];
+        if (ItemList is ShipLogItemListWrapper)
+        {
+            _layout.selectedIndex = index;
+        }
+        ItemList.SetSelectedIndex(index);
+    }
+
+    private int GetSelectedIndex()
+    {
+        if (ItemList is ShipLogItemListWrapper)
+        {
+            return _layout.selectedIndex;
+        }
+        return ItemList.GetSelectedIndex();
     }
 
     public override void ExitMode()
@@ -208,8 +287,14 @@ public class EpicasAlbumMode : ShipLogMode
 
     private void CloseLayout()
     {
-        _layout.Close();
-
+        if (ItemList is ShipLogItemListWrapper)
+        {
+            _layout.Close();
+        }
+        else
+        {
+            ItemList.Close();
+        }
         Locator.GetPromptManager().RemoveScreenPrompt(_showOnDiskPrompt);
         Locator.GetPromptManager().RemoveScreenPrompt(_deletePrompt);
         Locator.GetPromptManager().RemoveScreenPrompt(_selectPrompt);
@@ -224,7 +309,7 @@ public class EpicasAlbumMode : ShipLogMode
             int defaultIndex = _lastSnapshotNames.FindIndex(snapshotName => snapshotName.Equals(defaultSnapshotName));
             if (defaultIndex >= 0)
             {
-                _layout.selectedIndex = defaultIndex;
+                SetSelectedIndex(defaultIndex);
             }
             else
             {
@@ -259,7 +344,19 @@ public class EpicasAlbumMode : ShipLogMode
     private void CloseDeletionDialog()
     {
         _currentState = State.Main;
-        ItemList.Close();
+        if (ItemList is ShipLogItemListWrapper)
+        {
+            ItemList.Close();
+        }
+        else
+        {
+            int index = _lastSnapshotNames.IndexOf(_selectedSnapshotName);
+            if (index >= 0)
+            {
+                // Case were the snapshot wasn't deleted
+                ItemList.SetSelectedIndex(index);
+            }
+        }
         _oneShotSource.PlayOneShot(AudioType.ShipLogDeselectPlanet);
     }
 

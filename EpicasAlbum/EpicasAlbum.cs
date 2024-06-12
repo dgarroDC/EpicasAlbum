@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq;
 using EpicasAlbum.API;
-using EpicasAlbum.CustomShipLogModes;
+using EpicasAlbum.CustomModesAPIs;
 using OWML.ModHelper;
 using UnityEngine;
 
@@ -16,7 +16,8 @@ public class EpicasAlbum : ModBehaviour
     private bool _setupDone;
     private ScreenPrompt _uploadPrompt;
     private AlbumStore _store;
-    private EpicasAlbumMode _epicasAlbumMode;
+    private EpicasAlbumMode _epicasAlbumShipLogMode;
+    private EpicasAlbumMode _epicasAlbumSuitLogMode;
 
     private void Start()
     {
@@ -52,14 +53,27 @@ public class EpicasAlbum : ModBehaviour
         GameObject shipLogCanvas = GameObject.Find("Ship_Body/Module_Cabin/Systems_Cabin/ShipLogPivot/ShipLog/ShipLogPivot/ShipLogCanvas/");
         GameObject albumGo = new GameObject(nameof(EpicasAlbumMode));
         albumGo.transform.SetParent(shipLogCanvas.transform);
-        _epicasAlbumMode = albumGo.AddComponent<EpicasAlbumMode>();
-        _epicasAlbumMode.Store = _store;
+        _epicasAlbumShipLogMode = albumGo.AddComponent<EpicasAlbumMode>();
+        _epicasAlbumShipLogMode.Store = _store;
         customShipLogModesAPI.ItemListMake(true, false, itemList =>
         {
             itemList.name = "EpicasAlbumList";
-            _epicasAlbumMode.ItemList = new ItemListWrapper(customShipLogModesAPI, itemList);
-            customShipLogModesAPI.AddMode(_epicasAlbumMode, () => true, () => EpicasAlbumMode.Name);
+            _epicasAlbumShipLogMode.ItemList = new ShipLogItemListWrapper(customShipLogModesAPI, itemList);
+            customShipLogModesAPI.AddMode(_epicasAlbumShipLogMode, () => true, () => EpicasAlbumMode.Name);
         });
+        
+        // Optional Suit Log dependency, so use the ? operator:
+        ISuitLogAPI suitLogAPI = ModHelper.Interaction.TryGetModApi<ISuitLogAPI>("dgarro.SuitLog");
+        suitLogAPI?.ItemListMake(itemList =>
+        {
+            // Different that Ship Log's, that the mode component is in another object?
+            _epicasAlbumSuitLogMode = itemList.gameObject.AddComponent<EpicasAlbumMode>();
+            _epicasAlbumSuitLogMode.Store = _store;
+            _epicasAlbumSuitLogMode.ItemList = new SuitLogItemListWrapper(suitLogAPI, itemList);
+            _epicasAlbumSuitLogMode.gameObject.name = nameof(EpicasAlbumMode);
+            suitLogAPI.AddMode(_epicasAlbumSuitLogMode, () => true, () => EpicasAlbumMode.Name);
+        });
+
     }
 
     private void Update()
@@ -68,9 +82,9 @@ public class EpicasAlbum : ModBehaviour
 
         UpdateSnapshotUpload();
  
-        if (_epicasAlbumMode.IsActiveButNotCurrent())
+        if (_epicasAlbumShipLogMode.IsActiveButNotCurrent())
         {
-            _epicasAlbumMode.UpdateMode();
+            _epicasAlbumShipLogMode.UpdateMode();
         }
     }
 
@@ -111,7 +125,7 @@ public class EpicasAlbum : ModBehaviour
 
     public void OpenSnapshotChooserDialog(string defaultSnapshotName, Action<string> selectedSnapshotNameConsumer)
     {
-        _epicasAlbumMode.OpenSnapshotChooserDialog(defaultSnapshotName, selectedSnapshotNameConsumer);
+        _epicasAlbumShipLogMode.OpenSnapshotChooserDialog(defaultSnapshotName, selectedSnapshotNameConsumer);
     }
 
     public Sprite GetSnapshotSprite(string snapshotName)
